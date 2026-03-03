@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lunchly Pro – Nashik's #1 Tiffin SaaS Platform</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍱</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <!-- ══════════════ FIREBASE v9 MODULAR CDN ══════════════ -->
+  <!-- Core App -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+  <!-- Authentication -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
+  <!-- Firestore -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #22c55e; --green-dark: #16a34a; --green-deep: #15803d;
+      --green-xdark: #0c1a10; --green-dim: #166534; --green-glow: rgba(34,197,94,0.2);
+      --green-light: #dcfce7; --green-mid: #86efac; --white: #ffffff;
+      --off-white: #f8fffe; --cream: #f0fdf4; --gray: #6b7280;
+      --border: #d1fae5; --border-mid: #bbf7d0; --text: #0c1a10;
+      --text-soft: #374151; --text-muted: #6b7280; --orange: #f97316;
+      --yellow: #eab308; --purple: #8b5cf6; --blue: #3b82f6;
+      --card-bg: #ffffff; --page-bg: #f0fdf4; --header-text: #ffffff;
+      --input-bg: #ffffff; --input-border: #d1fae5;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06); --shadow-md: 0 4px 20px rgba(0,0,0,0.09);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12); --radius: 20px; --radius-sm: 12px;
+      --font: 'Sora', system-ui, sans-serif; --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+    .dark-mode {
+      --green: #4ade80; --green-dark: #22c55e; --green-deep: #4ade80;
+      --green-xdark: #0a1f13; --green-glow: rgba(74,222,128,0.15);
+      --green-light: #052e16; --green-mid: #166534; --white: #0f1f14;
+      --off-white: #0d1a10; --cream: #0c1a10; --border: #1a3a20; --border-mid: #166534;
+      --text: #f0fdf4; --text-soft: #bbf7d0; --text-muted: #6b7280;
+      --card-bg: #111f15; --page-bg: #0c1a10; --header-text: #f0fdf4;
+      --input-bg: #0f1f14; --input-border: #1a3a20;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3); --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    body { background: var(--page-bg); font-family: var(--font-body); color: var(--text); transition: background 0.3s, color 0.3s; }
+    ::-webkit-scrollbar { width: 0; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes pop { 0%{transform:scale(0.2);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @keyframes pulse { 0%,100%{opacity:0.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.04)} }
+    @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+    @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+    @keyframes marquee { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+    @keyframes glowPulse { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.4)} 50%{box-shadow:0 0 0 8px rgba(249,115,22,0)} }
+    .loading-skeleton {
+      background: linear-gradient(90deg, var(--green-light) 25%, var(--border-mid) 50%, var(--green-light) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    input, button { font-family: var(--font-body); }
+    input { background: var(--input-bg); color: var(--text); border-color: var(--input-border); transition: background 0.3s, color 0.3s; }
+  </style>
+</head>
+<body>
+<!-- reCAPTCHA invisible container — required by Firebase Phone Auth -->
+<div id="recaptcha-container"></div>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, createContext, useContext, useMemo } = React;
+
+/* ──────────────── CONTEXT ──────────────── */
+const AppCtx = createContext(null);
+const useApp = () => useContext(AppCtx);
+
+/* ──────────────── COMMISSION ENGINE ──────────────────────────────────────────
+   Strategy: Commission is globally configurable. During launch, it's 0%.
+   calculateCommission() returns 0 during launch mode.
+   This architecture lets us flip a single toggle to start collecting commission.
+   Future: Replace PLATFORM_CONFIG with a Firebase remote config call.
+────────────────────────────────────────────────────────────────────────────── */
+const PLATFORM_CONFIG_DEFAULTS = {
+  launchMode: true,           // true = 0% commission active
+  commissionRate: 0,          // current rate applied (0 during launch)
+  postLaunchRate: 8,          // default future rate shown in UI
+  launchMessage: "🎉 Launch Offer: 0% Commission – Limited Period",
+  platformName: "Lunchly Pro",
+};
+
+// Pure commission calculation — swap launchMode=false and update rate to go live
+const calculateCommission = (amount, config) => {
+  if (config.launchMode) return 0;
+  return Math.round(amount * (config.commissionRate / 100));
+};
+
+const simulateCommission = (amount, rate) => Math.round(amount * (rate / 100));
+
+/* ──────────────── CONSTANTS ──────────────── */
+const TIFFINS = [
+  { id:1, name:"Amma's Kitchen", price:1800, type:"veg", rating:4.8, reviews:142,
+    area:"College Road", emoji:"🥘", tag:"Best Seller", tagColor:"#22c55e",
+    cook:"Sunita Devi", since:"2019", deliveryTime:"12:30–1:30 PM", featured:true,
+    monthlyOrders:234, monthlyRevenue:42000,
+    menu:{ mon:"Dal Makhani, Jeera Rice, Roti, Salad", tue:"Chole, Puri, Raita, Pickle", wed:"Mix Veg, Rice, Roti, Dal", thu:"Palak Paneer, Rice, Roti, Curd", fri:"Rajma, Rice, Roti, Papad", sat:"Aloo Gobi, Dal, Rice, Roti", sun:"Special Thali – 7 items" },
+    description:"Home-style Maharashtrian meals made with love. Fresh ingredients daily, no preservatives.",
+    reviewsList: [
+      { user:"Rahul P.", stars:5, text:"Best tiffin in Nashik! Feels exactly like home food.", date:"2 days ago" },
+      { user:"Priya S.", stars:5, text:"Consistent quality, never missed a delivery in 3 months.", date:"1 week ago" },
+      { user:"Amit D.", stars:4, text:"Great taste but portion could be bigger.", date:"2 weeks ago" }
+    ]
+  },
+  { id:2, name:"Sharma Tiffin Centre", price:2200, type:"non-veg", rating:4.6, reviews:89,
+    area:"Gangapur", emoji:"🍗", tag:"Trending", tagColor:"#f97316",
+    cook:"Rakesh Sharma", since:"2021", deliveryTime:"1:00–2:00 PM", featured:false,
+    monthlyOrders:156, monthlyRevenue:34000,
+    menu:{ mon:"Chicken Curry, Rice, Roti, Dal", tue:"Egg Bhurji, Paratha, Salad", wed:"Mutton Gravy, Rice, Roti", thu:"Chicken Biryani, Raita", fri:"Fish Curry, Rice, Roti", sat:"Keema Pav, Salad", sun:"Special Non-Veg Thali" },
+    description:"Authentic North Indian non-veg meals. Protein-rich, freshly cooked every morning.",
+    reviewsList: [
+      { user:"Sneha K.", stars:5, text:"Chicken biryani on Thursdays is absolutely fire!", date:"3 days ago" },
+      { user:"Rohan J.", stars:4, text:"Great value for money, non-veg options are fresh.", date:"1 week ago" }
+    ]
+  },
+  { id:3, name:"Shubham Foods", price:1600, type:"veg", rating:4.5, reviews:203,
+    area:"Pathardi", emoji:"🫕", tag:"Budget Pick", tagColor:"#eab308",
+    cook:"Meena Joshi", since:"2018", deliveryTime:"12:00–1:00 PM", featured:false,
+    monthlyOrders:203, monthlyRevenue:32000,
+    menu:{ mon:"Pithla Bhakri, Rice", tue:"Dal Fry, Roti, Sabzi", wed:"Varan Bhat, Papad", thu:"Misal Pav, Tea", fri:"Shrikhand, Puri, Sabzi", sat:"Mix Dal, Roti, Rice", sun:"Traditional Maharashtrian Thali" },
+    description:"Authentic Maharashtrian home cooking. Budget-friendly and filling meals.",
+    reviewsList: [
+      { user:"Kavita R.", stars:5, text:"So affordable and authentic! The Misal on Thursdays is the best.", date:"5 days ago" },
+      { user:"Deepak N.", stars:4, text:"Good portions, very traditional taste.", date:"3 weeks ago" }
+    ]
+  },
+  { id:4, name:"Healthy Bites", price:2800, type:"veg", rating:4.9, reviews:67,
+    area:"Satpur", emoji:"🥗", tag:"Premium", tagColor:"#8b5cf6",
+    cook:"Dr. Priya Kulkarni", since:"2022", deliveryTime:"11:30 AM–12:30 PM", featured:false,
+    monthlyOrders:187, monthlyRevenue:52000,
+    menu:{ mon:"Quinoa Bowl, Salad, Soup", tue:"Protein Thali – Paneer + Sprouts", wed:"Mediterranean Wrap, Juice", thu:"Diet Thali, Fruit Bowl", fri:"Oats Khichdi, Salad", sat:"Detox Bowl, Herbal Tea", sun:"Cheat Day Special Thali" },
+    description:"Nutritionist-designed meals for health-conscious professionals. Calorie-counted daily.",
+    reviewsList: [
+      { user:"Aisha M.", stars:5, text:"Finally a tiffin that's actually healthy! Lost 3kg in 2 months!", date:"1 day ago" },
+      { user:"Vikram S.", stars:5, text:"Premium quality justified by the ingredients. Worth every rupee.", date:"4 days ago" }
+    ]
+  },
+];
+
+const AREAS = ["College Road","Gangapur","Pathardi","Satpur","Nashik Road","Dwarka","Panchavati","Indira Nagar"];
+
+const AREA_STATS = [
+  {area:"College Road",providers:5,orders:234,gmv:421200},
+  {area:"Gangapur",providers:3,orders:156,gmv:343200},
+  {area:"Satpur",providers:4,orders:203,gmv:568400},
+  {area:"Pathardi",providers:2,orders:120,gmv:192000},
+  {area:"Nashik Road",providers:2,orders:98,gmv:176400},
+  {area:"Panchavati",providers:2,orders:87,gmv:156600},
+];
+
+const COUPONS = { "FIRST50":"50% off on first order", "LUNCHLY20":"₹200 off above ₹1000", "WELCOME":"₹100 welcome credit" };
+
+const INITIAL_NOTIFICATIONS = [
+  { id:1, icon:"✅", title:"Order Confirmed", msg:"Your order from Amma's Kitchen is confirmed!", time:"2 min ago", read:false },
+  { id:2, icon:"🛵", title:"Out for Delivery", msg:"Your tiffin is on the way – ETA 20 mins", time:"1 hr ago", read:false },
+  { id:3, icon:"⭐", title:"Rate Your Meal", msg:"How was yesterday's tiffin? Leave a review!", time:"1 day ago", read:true },
+  { id:4, icon:"🎁", title:"Refer & Earn", msg:"Invite a friend and get ₹150 wallet credit!", time:"2 days ago", read:true },
+];
+
+const SAMPLE_ORDERS = [
+  { id:"LCH78231", tiffin:"Amma's Kitchen", emoji:"🥘", plan:"Monthly", status:"delivered", amount:1800, date:"Mar 1, 2025", statusLabel:"Delivered" },
+  { id:"LCH78019", tiffin:"Healthy Bites", emoji:"🥗", plan:"Daily", status:"out_for_delivery", amount:108, date:"Today", statusLabel:"Out for Delivery" },
+  { id:"LCH77800", tiffin:"Amma's Kitchen", emoji:"🥘", plan:"Today", status:"preparing", amount:69, date:"Today", statusLabel:"Preparing" },
+  { id:"LCH77650", tiffin:"Shubham Foods", emoji:"🫕", plan:"Monthly", status:"delivered", amount:1600, date:"Feb 15, 2025", statusLabel:"Delivered" },
+];
+
+const PROVIDER_ORDERS = [
+  { id:"ORD001", name:"Rahul Patil", address:"Room 204, Yashwant Hostel", plan:"Monthly", status:"pending", time:"12:30 PM" },
+  { id:"ORD002", name:"Priya Sharma", address:"Flat 3B, Green Residency", plan:"Daily", status:"pending", time:"1:00 PM" },
+  { id:"ORD003", name:"Amit Desai", address:"PG No.7, Shivaji Nagar", plan:"Monthly", status:"delivered", time:"12:00 PM" },
+  { id:"ORD004", name:"Sneha Kulkarni", address:"Hostel Block C, Room 12", plan:"Monthly", status:"delivered", time:"11:45 AM" },
+  { id:"ORD005", name:"Rohan Joshi", address:"Flat 2A, Sai Complex", plan:"Daily", status:"pending", time:"1:15 PM" },
+];
+
+const TAG_COLORS = {"Best Seller":"#22c55e","Trending":"#f97316","Budget Pick":"#eab308","Premium":"#8b5cf6","Healthy":"#06b6d4","New":"#3b82f6"};
+
+/* ──────────────── SHARED COMPONENTS ──────────────── */
+const PhoneFrame = ({ children }) => (
+  <div style={{ fontFamily:"var(--font)", background:"var(--page-bg)", minHeight:"100vh", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 16px", transition:"background 0.3s" }}>
+    <div style={{ width:"390px", minHeight:"844px", background:"var(--card-bg)", borderRadius:"44px", overflow:"hidden", position:"relative", boxShadow:"0 32px 80px rgba(0,0,0,0.2), 0 0 0 10px var(--border), 0 0 0 13px rgba(34,197,94,0.1)", display:"flex", flexDirection:"column" }}>
+      {children}
+    </div>
+  </div>
+);
+
+const Btn = ({ children, onClick, variant="primary", style:s, disabled, small, loading:ld }) => {
+  const base = { border:"none", borderRadius:small?"12px":"16px", padding:small?"10px 18px":"16px 24px", fontSize:small?"13px":"15px", fontWeight:"700", cursor:disabled||ld?"not-allowed":"pointer", width:"100%", fontFamily:"var(--font)", transition:"all 0.18s", letterSpacing:"0.2px", position:"relative", overflow:"hidden" };
+  const variants = {
+    primary:{ background:`linear-gradient(135deg, var(--green-dark), var(--green))`, color:"#fff", boxShadow:"0 6px 20px rgba(34,197,94,0.38)", opacity:disabled?0.5:1 },
+    outline:{ background:"transparent", color:"var(--green-dark)", border:`2px solid var(--green-dark)` },
+    ghost:{ background:"var(--green-light)", color:"var(--green-deep)" },
+    dark:{ background:"var(--green-xdark)", color:"#fff", boxShadow:"0 4px 16px rgba(15,31,23,0.25)" },
+    danger:{ background:"linear-gradient(135deg,#dc2626,#ef4444)", color:"#fff", boxShadow:"0 4px 14px rgba(220,38,38,0.3)" },
+    orange:{ background:"linear-gradient(135deg,#ea580c,#f97316)", color:"#fff", boxShadow:"0 4px 14px rgba(249,115,22,0.35)" },
+  };
+  return (
+    <button onClick={onClick} disabled={disabled||ld} style={{...base,...variants[variant],...s}}>
+      {ld ? (
+        <span style={{display:"inline-flex",alignItems:"center",gap:"10px",justifyContent:"center"}}>
+          <span style={{width:"16px",height:"16px",border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",display:"inline-block",animation:"spin 0.8s linear infinite"}}/>
+          Processing...
+        </span>
+      ) : children}
+    </button>
+  );
+};
+
+const Badge = ({type}) => (
+  <span style={{ background:type==="veg"?"#dcfce7":"#fee2e2", color:type==="veg"?"#15803d":"#dc2626", borderRadius:"8px", padding:"3px 10px", fontSize:"10px", fontWeight:"800", border:`1.5px solid ${type==="veg"?"#86efac":"#fca5a5"}`, letterSpacing:"0.4px" }}>
+    {type==="veg"?"● VEG":"● NON-VEG"}
+  </span>
+);
+
+// NEW: Commission badge for listing cards
+const CommissionBadge = () => (
+  <span style={{ background:"linear-gradient(135deg,#f97316,#ea580c)", color:"#fff", borderRadius:"6px", padding:"2px 8px", fontSize:"9px", fontWeight:"800", letterSpacing:"0.3px", display:"inline-flex", alignItems:"center", gap:"3px" }}>
+    🏷️ 0% Commission
+  </span>
+);
+
+const Stars = ({rating, count, interactive, value, onChange}) => {
+  if (interactive) return (
+    <div style={{display:"flex",gap:"4px"}}>
+      {[1,2,3,4,5].map(i=>(
+        <span key={i} onClick={()=>onChange&&onChange(i)} style={{fontSize:"24px",cursor:"pointer",color:i<=(value||0)?"#f59e0b":"#d1d5db",transition:"transform 0.15s"}}
+          onMouseEnter={e=>e.target.style.transform="scale(1.2)"} onMouseLeave={e=>e.target.style.transform="scale(1)"}>★</span>
+      ))}
+    </div>
+  );
+  return <span style={{color:"#f59e0b",fontSize:"12px",fontWeight:"700"}}>★ {rating}{count?<span style={{color:"var(--text-muted)",fontSize:"11px"}}> ({count})</span>:null}</span>;
+};
+
+const Card = ({children,style:s,onClick}) => (
+  <div onClick={onClick} style={{ background:"var(--card-bg)", borderRadius:"var(--radius)", padding:"16px", boxShadow:"var(--shadow-sm)", border:`1px solid var(--border)`, cursor:onClick?"pointer":"default", transition:"all 0.2s, background 0.3s", ...s }}>
+    {children}
+  </div>
+);
+
+const StatCard = ({icon, value, label, sub, color, style:s}) => (
+  <Card style={s}>
+    <div style={{fontSize:"22px",marginBottom:"6px"}}>{icon}</div>
+    <div style={{fontWeight:"900",fontSize:"20px",color:color||"var(--green-dark)",fontFamily:"var(--font)"}}>{value}</div>
+    <div style={{fontWeight:"700",fontSize:"12px",color:"var(--text)",marginTop:"2px"}}>{label}</div>
+    {sub&&<div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"2px"}}>{sub}</div>}
+  </Card>
+);
+
+const StatusBadge = ({status}) => {
+  const map = {
+    preparing: {bg:"#fef3c7",color:"#92400e",text:"🔥 Preparing"},
+    out_for_delivery: {bg:"#dbeafe",color:"#1e40af",text:"🛵 On the Way"},
+    delivered: {bg:"#dcfce7",color:"#15803d",text:"✅ Delivered"},
+    pending: {bg:"#fef9c3",color:"#92400e",text:"⏳ Pending"},
+    active: {bg:"#dcfce7",color:"#15803d",text:"● Active"},
+    paused: {bg:"#f3f4f6",color:"#6b7280",text:"⏸ Paused"},
+  };
+  const s = map[status] || map.pending;
+  return <span style={{fontSize:"10px",fontWeight:"700",padding:"4px 10px",borderRadius:"100px",background:s.bg,color:s.color}}>{s.text}</span>;
+};
+
+const TopBar = ({title, onBack, right, subtitle, dark=true}) => (
+  <div style={{background:dark?`linear-gradient(135deg,var(--green-xdark),#0d3320)`:"var(--card-bg)",padding:"48px 20px 16px",borderBottom:dark?"none":`1px solid var(--border)`}}>
+    <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+      {onBack&&<button onClick={onBack} style={{background:dark?"rgba(255,255,255,0.15)":"var(--green-light)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:dark?"#fff":"var(--green-dark)",fontSize:"16px",cursor:"pointer",flexShrink:0}}>←</button>}
+      <div style={{flex:1}}>
+        <div style={{fontWeight:"800",fontSize:"17px",color:dark?"#fff":"var(--text)"}}>{title}</div>
+        {subtitle&&<div style={{color:dark?"rgba(255,255,255,0.6)":"var(--text-muted)",fontSize:"12px",marginTop:"2px"}}>{subtitle}</div>}
+      </div>
+      {right}
+    </div>
+  </div>
+);
+
+const NotificationBell = ({notifications, onOpen}) => {
+  const unread = notifications.filter(n=>!n.read).length;
+  return (
+    <button onClick={onOpen} style={{position:"relative",background:"rgba(255,255,255,0.12)",border:"none",borderRadius:"12px",width:"38px",height:"38px",fontSize:"16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      🔔
+      {unread>0&&<span style={{position:"absolute",top:"-4px",right:"-4px",background:"#ef4444",color:"#fff",borderRadius:"50%",width:"18px",height:"18px",fontSize:"9px",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid var(--card-bg)"}}>{unread}</span>}
+    </button>
+  );
+};
+
+const DarkToggle = ({dark, onToggle}) => (
+  <button onClick={onToggle} style={{background:dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.06)",border:"none",borderRadius:"100px",padding:"6px 14px",color:dark?"#fff":"var(--text)",fontSize:"13px",cursor:"pointer",fontWeight:"600"}}>
+    {dark?"🌙 Dark":"☀️ Light"}
+  </button>
+);
+
+// NEW: Launch Mode Banner — marquee ticker for commission offer
+const LaunchBanner = () => (
+  <div style={{background:"linear-gradient(135deg,#f97316,#ea580c)",padding:"8px 0",overflow:"hidden",position:"relative"}}>
+    <div style={{display:"flex",alignItems:"center",gap:"8px",animation:"marquee 18s linear infinite",whiteSpace:"nowrap",willChange:"transform"}}>
+      {[...Array(4)].map((_,i)=>(
+        <span key={i} style={{fontSize:"12px",color:"#fff",fontWeight:"700",padding:"0 24px"}}>
+          🎉 Launch Offer: 0% Commission for Providers &nbsp;&nbsp;·&nbsp;&nbsp; 🤝 We support local home chefs &nbsp;&nbsp;·&nbsp;&nbsp; ⏳ Limited Period Only
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+// NEW: Toggle Switch Component
+const Toggle = ({value, onChange, label}) => (
+  <div style={{display:"flex",alignItems:"center",gap:"10px",cursor:"pointer"}} onClick={()=>onChange(!value)}>
+    <div style={{width:"48px",height:"26px",borderRadius:"13px",background:value?"var(--green)":"#d1d5db",position:"relative",transition:"background 0.2s",flexShrink:0}}>
+      <div style={{position:"absolute",top:"3px",left:value?"25px":"3px",width:"20px",height:"20px",borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
+    </div>
+    {label&&<span style={{fontSize:"13px",fontWeight:"600",color:"var(--text)"}}>{label}</span>}
+  </div>
+);
+
+/* ──────────────── MINI BAR CHART ──────────────── */
+const MiniBarChart = ({data, height=100, colorActive, colorInactive}) => {
+  const maxV = Math.max(...data.map(d=>d.v), 1);
+  return (
+    <div style={{display:"flex",gap:"6px",alignItems:"flex-end",height:`${height}px`}}>
+      {data.map((r,i)=>(
+        <div key={r.m||r.d||i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"4px"}}>
+          {r.v > 0 && <div style={{fontSize:"8px",color:"var(--text-muted)",fontWeight:"600"}}>{r.label||""}</div>}
+          <div style={{width:"100%",borderRadius:"6px 6px 0 0",background:i===data.length-1?(colorActive||`linear-gradient(180deg,var(--green),var(--green-dark))`):(colorInactive||"var(--green-light)"),height:`${Math.max((r.v/maxV)*height, 4)}px`,boxShadow:i===data.length-1?"0 4px 14px rgba(34,197,94,0.4)":"none",transition:"height 0.5s"}}/>
+          <div style={{fontSize:"9px",color:"var(--text-muted)",fontWeight:"600"}}>{r.m||r.d}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ──────────────── SPLASH SCREEN ──────────────── */
+const SplashScreen = ({onDone}) => {
+  const [ph, setPh] = useState(0);
+  useEffect(()=>{
+    const t1=setTimeout(()=>setPh(1),300);
+    const t2=setTimeout(()=>setPh(2),900);
+    const t3=setTimeout(()=>setPh(3),1600);
+    const t4=setTimeout(onDone,3000);
+    return()=>[t1,t2,t3,t4].forEach(clearTimeout);
+  },[]);
+  return (
+    <div style={{ flex:1, background:`linear-gradient(160deg,var(--green-xdark) 0%,#0d3320 50%,#0a2918 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"844px", position:"relative", overflow:"hidden" }}>
+      {[...Array(5)].map((_,i)=>(
+        <div key={i} style={{position:"absolute",borderRadius:"50%",background:"rgba(34,197,94,0.06)",width:`${(i+1)*120}px`,height:`${(i+1)*120}px`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:`pulse ${2+i*0.4}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
+      ))}
+      <div style={{animation:ph>=0?"pop 0.8s cubic-bezier(0.34,1.56,0.64,1) both":"none",fontSize:"96px",lineHeight:1,zIndex:1}}>🍱</div>
+      {ph>=1&&<div style={{animation:"fadeUp 0.6s ease-out both",textAlign:"center",zIndex:1,marginTop:"20px"}}>
+        <div style={{fontWeight:"900",fontSize:"56px",color:"var(--green)",letterSpacing:"-3px",lineHeight:1,fontFamily:"var(--font)"}}>Lunchly</div>
+        <div style={{color:"var(--green-mid)",fontSize:"11px",marginTop:"10px",fontWeight:"600",letterSpacing:"4px",textTransform:"uppercase"}}>NASHIK'S #1 TIFFIN PLATFORM</div>
+      </div>}
+      {ph>=2&&<div style={{animation:"fadeUp 0.5s ease-out both",marginTop:"28px",zIndex:1}}>
+        <div style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.25)",borderRadius:"100px",padding:"12px 28px",color:"rgba(255,255,255,0.85)",fontSize:"14px",fontWeight:"500",fontStyle:"italic"}}>
+          "No Calls. Just Lunchly."
+        </div>
+      </div>}
+      {ph>=3&&<div style={{animation:"fadeUp 0.4s ease-out both",marginTop:"28px",zIndex:1,padding:"0 20px"}}>
+        <div style={{background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:"12px",padding:"10px 18px",textAlign:"center"}}>
+          <div style={{fontSize:"13px",color:"#fed7aa",fontWeight:"700"}}>🎉 0% Commission for Home Chefs</div>
+          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.5)",marginTop:"4px"}}>We believe in empowering local cooks</div>
+        </div>
+      </div>}
+      {ph>=3&&<div style={{animation:"fadeUp 0.4s ease-out both",marginTop:"16px",zIndex:1,display:"flex",gap:"6px",flexWrap:"wrap",justifyContent:"center",padding:"0 20px"}}>
+        {["✓ Verified Cooks","✓ Fresh Daily","✓ On-Time Delivery"].map(t=>(
+          <span key={t} style={{background:"rgba(34,197,94,0.15)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:"100px",padding:"5px 10px",fontSize:"10px",color:"rgba(255,255,255,0.7)",fontWeight:"600"}}>{t}</span>
+        ))}
+      </div>}
+      <div style={{position:"absolute",bottom:"44px",display:"flex",gap:"6px"}}>
+        {[0,1,2].map(i=><div key={i} style={{width:i===ph?"28px":"6px",height:"6px",borderRadius:"3px",background:i===ph?"var(--green)":"rgba(255,255,255,0.15)",transition:"all 0.4s"}}/>)}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── ROLE SELECT ──────────────── */
+const RoleScreen = ({onCustomer,onProvider,onAdmin}) => (
+  <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+    <LaunchBanner/>
+    <div style={{background:`linear-gradient(160deg,var(--green-xdark),#0d3320)`,padding:"44px 28px 36px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"var(--green-glow)"}}/>
+      <div style={{position:"absolute",bottom:-40,left:-40,width:160,height:160,borderRadius:"50%",background:"rgba(34,197,94,0.05)"}}/>
+      <div style={{fontSize:"52px",animation:"bounce 2.5s infinite",position:"relative"}}>🍱</div>
+      <div style={{fontWeight:"900",fontSize:"40px",color:"var(--green)",letterSpacing:"-2px",marginTop:"12px",position:"relative",fontFamily:"var(--font)"}}>Lunchly</div>
+      <div style={{color:"var(--green-mid)",fontSize:"12px",marginTop:"6px",fontWeight:"500",letterSpacing:"2px",position:"relative"}}>NASHIK'S TIFFIN MARKETPLACE</div>
+      <div style={{display:"flex",gap:"8px",justifyContent:"center",marginTop:"14px",flexWrap:"wrap"}}>
+        {["18 Providers","342+ Customers","Daily Fresh"].map(t=>(
+          <span key={t} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:"100px",padding:"4px 12px",fontSize:"10px",color:"rgba(255,255,255,0.7)",fontWeight:"600"}}>{t}</span>
+        ))}
+      </div>
+    </div>
+    <div style={{flex:1,padding:"24px 20px",background:"var(--off-white)",overflowY:"auto"}}>
+      {/* Trust signal */}
+      <div style={{background:"linear-gradient(135deg,#fff7ed,#ffedd5)",border:"1px solid #fed7aa",borderRadius:"14px",padding:"12px 16px",marginBottom:"20px",display:"flex",gap:"12px",alignItems:"center"}}>
+        <span style={{fontSize:"24px"}}>🤝</span>
+        <div>
+          <div style={{fontWeight:"700",fontSize:"13px",color:"#92400e"}}>Supporting Local Home Chefs</div>
+          <div style={{fontSize:"11px",color:"#c2410c",marginTop:"2px"}}>Zero commission during our launch period. Always.</div>
+        </div>
+      </div>
+      <div style={{textAlign:"center",marginBottom:"20px"}}>
+        <div style={{fontWeight:"800",fontSize:"20px",color:"var(--text)",fontFamily:"var(--font)"}}>Choose Your Role</div>
+        <div style={{color:"var(--text-muted)",fontSize:"12px",marginTop:"4px"}}>Select how you'll use Lunchly</div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
+        {[
+          {emoji:"🎓",title:"Customer",sub:"Find, subscribe & track your tiffins",action:onCustomer,bg:`linear-gradient(135deg,var(--green-dark),var(--green))`,shadow:"0 8px 28px rgba(34,197,94,0.3)",textCol:"#fff"},
+          {emoji:"👨‍🍳",title:"Tiffin Provider",sub:"0% commission · Manage orders & revenue",action:onProvider,bg:"var(--green-xdark)",shadow:"0 4px 20px rgba(15,31,23,0.3)",textCol:"#fff",badge:"0% Commission"},
+          {emoji:"⚙️",title:"Admin Panel",sub:"Platform analytics & commission controls",action:onAdmin,bg:"var(--card-bg)",border:`2px solid var(--green-dark)`,shadow:"var(--shadow-sm)",textCol:"var(--green-dark)"},
+        ].map(r=>(
+          <button key={r.title} onClick={r.action} style={{ background:r.bg, border:r.border||"none", borderRadius:"18px", padding:"18px 22px", cursor:"pointer", display:"flex", alignItems:"center", gap:"16px", boxShadow:r.shadow, fontFamily:"var(--font)", transition:"all 0.2s", textAlign:"left" }}>
+            <span style={{fontSize:"28px",background:"rgba(255,255,255,0.1)",padding:"10px",borderRadius:"14px"}}>{r.emoji}</span>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+                <div style={{fontWeight:"800",fontSize:"16px",color:r.textCol}}>{r.title}</div>
+                {r.badge&&<span style={{background:"rgba(249,115,22,0.9)",color:"#fff",borderRadius:"6px",padding:"2px 8px",fontSize:"9px",fontWeight:"800"}}>{r.badge}</span>}
+              </div>
+              <div style={{fontSize:"12px",color:r.border?"var(--text-muted)":"rgba(255,255,255,0.6)",marginTop:"2px"}}>{r.sub}</div>
+            </div>
+            <span style={{color:r.border?"var(--green)":"rgba(255,255,255,0.3)",fontSize:"22px"}}>›</span>
+          </button>
+        ))}
+      </div>
+      <div style={{marginTop:"16px",padding:"12px 14px",background:"var(--green-light)",borderRadius:"12px",textAlign:"center",border:`1px solid var(--border-mid)`}}>
+        <span style={{fontSize:"11px",color:"var(--green-deep)",fontWeight:"700"}}>🔒 Secure Platform · Verified Providers · Trusted by 342+ customers</span>
+      </div>
+    </div>
+  </div>
+);
+
+/* ──────────────── OTP LOGIN ──────────────── */
+const OTPLogin = ({onLogin, onBack, role}) => {
+  const [step, setStep] = useState("phone");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState(["","","","",""]);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+  const otpRefs = [useRef(),useRef(),useRef(),useRef(),useRef()];
+
+  useEffect(()=>{ if(timer>0){const t=setTimeout(()=>setTimer(timer-1),1000);return()=>clearTimeout(t);} },[timer]);
+
+  /* ── Send OTP via Firebase Phone Auth ──────────────────────── */
+  const sendOTP = async () => {
+    if (phone.length < 10) return;
+    setErrorMsg(""); setLoading(true);
+    console.log("[Lunchly] Sending OTP to +91" + phone);
+    try {
+      if (window.lunchlyFirebase) {
+        await window.lunchlyFirebase.sendOTP("+91" + phone);
+        console.log("[Lunchly] OTP dispatched via Firebase");
+      } else {
+        console.warn("[Lunchly] Firebase not ready — using mock flow");
+        await new Promise(r => setTimeout(r, 1400));
+      }
+      setLoading(false); setStep("otp"); setTimer(30);
+    } catch (err) {
+      setLoading(false);
+      console.error("[Lunchly] sendOTP error:", err);
+      setErrorMsg(err.message || "Failed to send OTP. Please try again.");
+    }
+  };
+
+  const handleOtpChange = (i, val) => {
+    const n=[...otp]; n[i]=val.slice(-1); setOtp(n);
+    if(val&&i<4) otpRefs[i+1].current?.focus();
+  };
+
+  /* ── Verify OTP via Firebase ────────────────────────────────── */
+  const verifyOTP = async () => {
+    setErrorMsg(""); setLoading(true);
+    console.log("[Lunchly] Verifying OTP:", otp.join(""));
+    try {
+      if (window.lunchlyFirebase) {
+        await window.lunchlyFirebase.verifyOTP(otp.join(""));
+        console.log("[Lunchly] OTP verified — moving to profile step");
+      } else {
+        await new Promise(r => setTimeout(r, 1400));
+      }
+      setLoading(false); setStep("profile");
+    } catch (err) {
+      setLoading(false);
+      console.error("[Lunchly] verifyOTP error:", err);
+      setErrorMsg("Invalid OTP. Please check and try again.");
+    }
+  };
+
+  /* ── Save user to Firestore & complete login ────────────────── */
+  const completeProfile = async () => {
+    if (!name.trim()) return;
+    setErrorMsg(""); setLoading(true);
+    console.log("[Lunchly] Saving user profile:", name, phone);
+    try {
+      let uid = "local_" + Date.now();
+      if (window.lunchlyFirebase) {
+        const saved = await window.lunchlyFirebase.saveUser(phone, name);
+        uid = saved.uid;
+        console.log("[Lunchly] User saved to Firestore, uid:", uid);
+      } else {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      setLoading(false);
+      onLogin({ name, phone, uid });
+    } catch (err) {
+      setLoading(false);
+      console.error("[Lunchly] saveUser error:", err);
+      setErrorMsg("Could not save profile. Please try again.");
+    }
+  };
+  const inp = {width:"100%",padding:"14px 16px",borderRadius:"14px",border:`2px solid var(--input-border)`,fontSize:"15px",outline:"none",marginBottom:"12px",background:"var(--input-bg)",color:"var(--text)",fontFamily:"var(--font-body)"};
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      <div style={{background:`linear-gradient(160deg,var(--green-xdark),#0d3320)`,padding:"60px 28px 44px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:150,height:150,borderRadius:"50%",background:"var(--green-glow)"}}/>
+        <button onClick={onBack} style={{position:"absolute",top:"48px",left:"20px",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer"}}>←</button>
+        <div style={{fontSize:"56px",animation:"pop 0.6s ease-out both",position:"relative"}}>{role==="provider"?"👨‍🍳":"🎓"}</div>
+        <div style={{fontWeight:"900",fontSize:"24px",color:"#fff",marginTop:"14px",position:"relative",fontFamily:"var(--font)"}}>{step==="phone"?"Enter Phone":step==="otp"?"Verify OTP":"Your Profile"}</div>
+        <div style={{color:"var(--green-mid)",fontSize:"13px",marginTop:"6px",position:"relative"}}>{step==="phone"?"We'll send you a 5-digit OTP":step==="otp"?`OTP sent to +91 ${phone}`:"Almost there!"}</div>
+      </div>
+      <div style={{flex:1,padding:"28px 24px",background:"var(--off-white)"}}>
+        {errorMsg&&<div style={{background:"#fee2e2",border:"1.5px solid #fca5a5",borderRadius:"12px",padding:"10px 14px",marginBottom:"14px",fontSize:"13px",color:"#dc2626",fontWeight:"600",display:"flex",alignItems:"center",gap:"8px"}}>⚠️ {errorMsg}</div>}
+        {step==="phone"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"8px"}}>Mobile Number</div>
+          <div style={{display:"flex",gap:"8px",marginBottom:"16px"}}>
+            <div style={{padding:"14px",background:"var(--card-bg)",border:`2px solid var(--input-border)`,borderRadius:"14px",fontWeight:"700",fontSize:"15px",color:"var(--text-muted)"}}>+91</div>
+            <input value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="Enter 10-digit number" type="tel" style={{...inp,marginBottom:0,flex:1}}/>
+          </div>
+          <Btn onClick={sendOTP} loading={loading} disabled={phone.length<10}>Send OTP →</Btn>
+        </>}
+        {step==="otp"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"16px",textAlign:"center"}}>Enter 5-digit OTP</div>
+          <div style={{display:"flex",gap:"8px",justifyContent:"center",marginBottom:"20px"}}>
+            {otp.map((v,i)=>(
+              <input key={i} ref={otpRefs[i]} value={v} onChange={e=>handleOtpChange(i,e.target.value)} type="tel" maxLength={1}
+                style={{width:"52px",height:"56px",textAlign:"center",fontSize:"22px",fontWeight:"800",borderRadius:"14px",border:`2px solid ${v?"var(--green)":"var(--input-border)"}`,outline:"none",background:"var(--input-bg)",color:"var(--text)",transition:"border 0.2s"}}/>
+            ))}
+          </div>
+          <Btn onClick={verifyOTP} loading={loading} disabled={otp.join("").length<5}>Verify OTP →</Btn>
+          <div style={{textAlign:"center",marginTop:"16px",fontSize:"13px",color:"var(--text-muted)"}}>
+            {timer>0?`Resend in ${timer}s`:<span style={{color:"var(--green-dark)",cursor:"pointer",fontWeight:"700"}} onClick={()=>{setTimer(30);setOtp(["","","","",""]);setStep("phone");}}>Resend OTP</span>}
+          </div>
+        </>}
+        {step==="profile"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"8px"}}>Your Name</div>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Enter your full name" style={inp}/>
+          <Btn onClick={completeProfile} loading={loading} disabled={!name.trim()}>Let's Go 🚀</Btn>
+        </>}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── LOCATION SCREEN ──────────────── */
+const LocationScreen = ({onSelect, onBack}) => {
+  const [selected,setSelected] = useState(null);
+  const [search,setSearch] = useState("");
+  const filtered = AREAS.filter(a=>a.toLowerCase().includes(search.toLowerCase()));
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      <div style={{background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`,padding:"48px 20px 24px"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",marginBottom:"16px",display:"block"}}>←</button>
+        <div style={{fontWeight:"900",fontSize:"22px",color:"#fff",fontFamily:"var(--font)"}}>📍 Select Your Area</div>
+        <div style={{color:"var(--green-mid)",fontSize:"13px",marginTop:"6px"}}>We'll show tiffins available near you</div>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search area..." style={{width:"100%",marginTop:"16px",padding:"12px 16px",borderRadius:"14px",border:"none",fontSize:"14px",fontFamily:"var(--font-body)",outline:"none",background:"rgba(255,255,255,0.12)",color:"#fff",boxSizing:"border-box"}}/>
+      </div>
+      <div style={{flex:1,padding:"16px",overflowY:"auto",background:"var(--off-white)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+          {filtered.map(a=>(
+            <button key={a} onClick={()=>setSelected(a)} style={{background:selected===a?`linear-gradient(135deg,var(--green-dark),var(--green))`:"var(--card-bg)",border:`2px solid ${selected===a?"var(--green)":"var(--border)"}`,borderRadius:"16px",padding:"16px 12px",cursor:"pointer",textAlign:"center",boxShadow:selected===a?"0 6px 20px rgba(34,197,94,0.3)":"var(--shadow-sm)",transition:"all 0.2s"}}>
+              <div style={{fontSize:"20px",marginBottom:"6px"}}>📍</div>
+              <div style={{fontWeight:"700",fontSize:"13px",color:selected===a?"#fff":"var(--text)"}}>{a}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:"14px 20px 28px",background:"var(--card-bg)",borderTop:`1px solid var(--border)`}}>
+        <Btn onClick={()=>selected&&onSelect(selected)} disabled={!selected}>Continue →</Btn>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── LISTING SCREEN ──────────────── */
+const ListingScreen = ({area, onSelect, onBack, user, notifications, onNotifications, extraTiffins, platformConfig}) => {
+  const [filter,setFilter] = useState("all");
+  const [search,setSearch] = useState("");
+  const [sort,setSort] = useState("recommended");
+  const allTiffins = [...TIFFINS,...(extraTiffins||[])];
+
+  const filtered = useMemo(()=>{
+    let list = allTiffins.filter(t=>{
+      const matchFilter = filter==="all" || t.type===filter;
+      const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.area.toLowerCase().includes(search.toLowerCase()) || t.cook.toLowerCase().includes(search.toLowerCase());
+      return matchFilter && matchSearch;
+    });
+    if (sort==="recommended") list = [...list].sort((a,b)=> (b.featured?1:0)-(a.featured?1:0) || b.rating-a.rating);
+    else if (sort==="rating") list = [...list].sort((a,b)=>b.rating-a.rating);
+    else if (sort==="price_low") list = [...list].sort((a,b)=>a.price-b.price);
+    else if (sort==="price_high") list = [...list].sort((a,b)=>b.price-a.price);
+    return list;
+  },[allTiffins,filter,search,sort]);
+
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      <LaunchBanner/>
+      <div style={{background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`,padding:"20px 20px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"14px"}}>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",flexShrink:0}}>←</button>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"900",fontSize:"18px",color:"#fff",fontFamily:"var(--font)"}}>🍱 Tiffins near you</div>
+            <div style={{color:"var(--green-mid)",fontSize:"12px",marginTop:"2px"}}>📍 {area} · {filtered.length} options</div>
+          </div>
+          <NotificationBell notifications={notifications} onOpen={onNotifications}/>
+        </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search by name, area, cook..."
+          style={{width:"100%",padding:"11px 16px",borderRadius:"14px",border:"none",fontSize:"13px",fontFamily:"var(--font-body)",outline:"none",background:"rgba(255,255,255,0.12)",color:"#fff",boxSizing:"border-box",marginBottom:"12px"}}/>
+        <div style={{display:"flex",gap:"8px",alignItems:"center",overflowX:"auto",paddingBottom:"4px"}}>
+          {[["all","All"],["veg","🟢 Veg"],["non-veg","🔴 Non-Veg"]].map(([val,label])=>(
+            <button key={val} onClick={()=>setFilter(val)} style={{background:filter===val?"var(--green)":"rgba(255,255,255,0.12)",border:"none",borderRadius:"100px",padding:"7px 14px",color:"#fff",fontWeight:"700",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap",boxShadow:filter===val?"0 4px 12px rgba(34,197,94,0.4)":"none"}}>{label}</button>
+          ))}
+          <select value={sort} onChange={e=>setSort(e.target.value)} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:"100px",padding:"7px 14px",color:"#fff",fontWeight:"700",fontSize:"12px",cursor:"pointer",outline:"none",marginLeft:"auto",flexShrink:0}}>
+            <option value="recommended" style={{color:"#000"}}>🏆 Recommended</option>
+            <option value="rating" style={{color:"#000"}}>⭐ Top Rated</option>
+            <option value="price_low" style={{color:"#000"}}>💰 Lowest Price</option>
+            <option value="price_high" style={{color:"#000"}}>💎 Highest Price</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{flex:1,padding:"14px",overflowY:"auto",display:"flex",flexDirection:"column",gap:"12px"}}>
+        {/* Trust signal strip */}
+        <div style={{background:"linear-gradient(135deg,#fff7ed,#ffedd5)",border:"1px solid #fed7aa",borderRadius:"12px",padding:"10px 14px",display:"flex",gap:"10px",alignItems:"center"}}>
+          <span style={{fontSize:"18px"}}>🤝</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"700",fontSize:"12px",color:"#92400e"}}>We support local home chefs</div>
+            <div style={{fontSize:"11px",color:"#c2410c",marginTop:"1px"}}>Zero commission during launch · Helping Nashik's home cooks grow</div>
+          </div>
+        </div>
+
+        {filtered.length===0&&(
+          <div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-muted)"}}>
+            <div style={{fontSize:"40px",marginBottom:"12px"}}>🔍</div>
+            <div style={{fontWeight:"700",fontSize:"15px",color:"var(--text)"}}>No tiffins found</div>
+            <div style={{fontSize:"13px",marginTop:"6px"}}>Try a different search or filter</div>
+          </div>
+        )}
+
+        {filtered.map((t,i)=>(
+          <div key={t.id} onClick={()=>onSelect(t)}
+            style={{background:"var(--card-bg)",borderRadius:"20px",overflow:"hidden",boxShadow:t.featured?"0 4px 24px rgba(34,197,94,0.18)":"var(--shadow-sm)",cursor:"pointer",border:t.featured?`2px solid var(--green)`:`1px solid var(--border)`,animation:`fadeUp 0.4s ease-out ${i*0.06}s both`,transition:"transform 0.2s, box-shadow 0.2s",position:"relative"}}>
+            {/* Featured crown */}
+            {t.featured&&(
+              <div style={{background:"linear-gradient(135deg,var(--green-dark),var(--green))",padding:"6px 16px",display:"flex",alignItems:"center",gap:"8px"}}>
+                <span style={{fontSize:"12px",color:"#fff",fontWeight:"700"}}>⭐ Featured Provider</span>
+                <div style={{marginLeft:"auto",display:"flex",gap:"6px",alignItems:"center"}}>
+                  <CommissionBadge/>
+                </div>
+              </div>
+            )}
+            <div style={{background:t.type==="veg"?"linear-gradient(135deg,#f0fdf4,#dcfce7)":"linear-gradient(135deg,#fff7ed,#ffedd5)",padding:"16px 16px 12px",display:"flex",alignItems:"flex-start",gap:"14px"}}>
+              <div style={{width:"62px",height:"62px",borderRadius:"18px",background:"var(--card-bg)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",boxShadow:"var(--shadow-sm)",flexShrink:0}}>{t.emoji}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+                  <span style={{fontWeight:"800",fontSize:"15px",color:"var(--text)",fontFamily:"var(--font)"}}>{t.name}</span>
+                  <span style={{background:t.tagColor,color:"#fff",borderRadius:"6px",padding:"2px 8px",fontSize:"9px",fontWeight:"800"}}>{t.tag}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"6px",flexWrap:"wrap"}}>
+                  <Badge type={t.type}/>
+                  <Stars rating={t.rating} count={t.reviews}/>
+                </div>
+                <div style={{color:"var(--text-muted)",fontSize:"11px",marginTop:"4px"}}>👨‍🍳 {t.cook} · Since {t.since}</div>
+                {/* Commission badge — shown on all cards */}
+                {!t.featured&&<div style={{marginTop:"6px"}}><CommissionBadge/></div>}
+              </div>
+            </div>
+            <div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderTop:`1px solid var(--border)`}}>
+              <div>
+                <div style={{fontSize:"11px",color:"var(--text-muted)"}}>From / month</div>
+                <div style={{fontWeight:"900",fontSize:"20px",color:"var(--green-dark)",fontFamily:"var(--font)"}}>₹{t.price.toLocaleString()}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px"}}>
+                <div style={{fontSize:"11px",color:"var(--text-muted)"}}>🕐 {t.deliveryTime}</div>
+                <button style={{background:`linear-gradient(135deg,var(--green-dark),var(--green))`,color:"#fff",border:"none",borderRadius:"12px",padding:"10px 18px",fontWeight:"800",fontSize:"13px",cursor:"pointer",boxShadow:"0 4px 14px rgba(34,197,94,0.35)"}}>View →</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── DETAIL SCREEN ──────────────── */
+const DetailScreen = ({tiffin,onSubscribe,onBack}) => {
+  const [plan,setPlan] = useState("monthly");
+  const [mealTime,setMealTime] = useState("lunch");
+  const [activeTab,setActiveTab] = useState("plans");
+  const [userRating,setUserRating] = useState(0);
+  const [reviewText,setReviewText] = useState("");
+  const [localReviews,setLocalReviews] = useState(tiffin.reviewsList||[]);
+  const days=["mon","tue","wed","thu","fri","sat","sun"];
+  const dayLabels={mon:"Mon",tue:"Tue",wed:"Wed",thu:"Thu",fri:"Fri",sat:"Sat",sun:"Sun"};
+  const todayKey = days[new Date().getDay()===0?6:new Date().getDay()-1];
+  const perDay = Math.round(tiffin.price/26);
+  const priceMap = { today: perDay, daily: perDay*7, monthly: tiffin.price };
+  const amountToPay = priceMap[plan];
+  const PLANS = [
+    { val:"today", label:"Today Only", sub:"Just 1 meal", icon:"⚡", price:`₹${perDay}`, note:"No commitment.", accent:"#f97316" },
+    { val:"daily", label:"Daily Plan", sub:"7 days at a time", icon:"📅", price:`₹${perDay}/day`, note:"7-day advance required.", accent:"var(--green)" },
+    { val:"monthly", label:"Monthly Plan", sub:"Best value – save 20%", icon:"🏆", price:`₹${tiffin.price}/mo`, note:"1-week advance required.", accent:"var(--purple)" },
+  ];
+  const submitReview = () => { if(!userRating||!reviewText.trim()) return; setLocalReviews([{user:"You",stars:userRating,text:reviewText,date:"Just now"},...localReviews]); setUserRating(0); setReviewText(""); };
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      <div style={{background:`linear-gradient(160deg,var(--green-xdark),#0d3320)`,padding:"48px 20px 24px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"var(--green-glow)"}}/>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",marginBottom:"18px",display:"block"}}>←</button>
+        <div style={{display:"flex",gap:"14px",alignItems:"center"}}>
+          <div style={{width:"76px",height:"76px",borderRadius:"22px",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"38px",border:"2px solid rgba(255,255,255,0.15)",flexShrink:0}}>{tiffin.emoji}</div>
+          <div>
+            <div style={{fontWeight:"900",fontSize:"20px",color:"#fff",fontFamily:"var(--font)"}}>{tiffin.name}</div>
+            <div style={{display:"flex",gap:"8px",marginTop:"8px",flexWrap:"wrap"}}><Badge type={tiffin.type}/><Stars rating={tiffin.rating} count={tiffin.reviews}/></div>
+            <div style={{color:"var(--green-mid)",fontSize:"12px",marginTop:"4px"}}>👨‍🍳 {tiffin.cook} · 🕐 {tiffin.deliveryTime}</div>
+          </div>
+        </div>
+        <div style={{marginTop:"14px",background:"rgba(255,255,255,0.07)",borderRadius:"12px",padding:"10px 14px",color:"rgba(255,255,255,0.65)",fontSize:"12px",lineHeight:"1.5"}}>{tiffin.description}</div>
+        <div style={{marginTop:"10px",display:"flex",gap:"8px",flexWrap:"wrap"}}>
+          <div style={{background:"rgba(249,115,22,0.2)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:"100px",padding:"6px 14px",display:"inline-flex",alignItems:"center",gap:"8px"}}>
+            <span style={{fontSize:"12px",color:"#fed7aa",fontWeight:"700"}}>⚡ Today: {tiffin.menu[todayKey].split(",")[0]}</span>
+          </div>
+          <div style={{background:"rgba(34,197,94,0.2)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:"100px",padding:"6px 14px",display:"inline-flex",alignItems:"center",gap:"6px"}}>
+            <span style={{fontSize:"12px",color:"#bbf7d0",fontWeight:"700"}}>🏷️ 0% Commission Partner</span>
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",borderBottom:`2px solid var(--border)`,background:"var(--card-bg)"}}>
+        {[["plans","Plans"],["menu","📅 Menu"],["reviews","⭐ Reviews"]].map(([t,l])=>(
+          <button key={t} onClick={()=>setActiveTab(t)} style={{flex:1,padding:"12px 8px",border:"none",background:"none",fontWeight:"700",fontSize:"13px",color:activeTab===t?"var(--green-dark)":"var(--text-muted)",borderBottom:`2px solid ${activeTab===t?"var(--green)":"transparent"}`,cursor:"pointer",fontFamily:"var(--font-body)",marginBottom:"-2px",transition:"color 0.2s"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+        {activeTab==="plans"&&(
+          <div style={{animation:"fadeUp 0.3s ease-out"}}>
+            <div style={{marginBottom:"14px"}}>
+              <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"10px",fontFamily:"var(--font)"}}>📋 Choose Your Plan</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                {PLANS.map(p=>(
+                  <button key={p.val} onClick={()=>setPlan(p.val)} style={{display:"flex",alignItems:"center",gap:"12px",background:plan===p.val?`linear-gradient(135deg,${p.accent}dd,${p.accent})`:"var(--card-bg)",border:plan===p.val?"none":`2px solid var(--border)`,borderRadius:"16px",padding:"14px",cursor:"pointer",fontFamily:"var(--font-body)",textAlign:"left",boxShadow:plan===p.val?`0 6px 20px ${p.accent}44`:"var(--shadow-sm)",transition:"all 0.2s"}}>
+                    <div style={{width:"44px",height:"44px",borderRadius:"12px",background:plan===p.val?"rgba(255,255,255,0.2)":"var(--off-white)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>{p.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:"800",fontSize:"14px",color:plan===p.val?"#fff":"var(--text)"}}>{p.label}</div>
+                      <div style={{fontSize:"11px",color:plan===p.val?"rgba(255,255,255,0.7)":"var(--text-muted)",marginTop:"2px"}}>{p.sub} · {p.note}</div>
+                    </div>
+                    <div style={{fontWeight:"900",fontSize:"15px",color:plan===p.val?"#fff":p.accent}}>{p.price}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {plan==="today"&&<div style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"12px",color:"var(--text-soft)",fontWeight:"700",marginBottom:"8px"}}>🍽️ Choose meal time:</div>
+              <div style={{display:"flex",gap:"8px"}}>
+                {[["lunch","🍱 Lunch","12:30 PM"],["dinner","🌙 Dinner","7:30 PM"]].map(([t,l,time])=>(
+                  <button key={t} onClick={()=>setMealTime(t)} style={{flex:1,background:mealTime===t?"#f97316":"var(--card-bg)",border:`2px solid ${mealTime===t?"#f97316":"var(--border)"}`,borderRadius:"12px",padding:"10px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}>
+                    <div style={{fontWeight:"700",fontSize:"12px",color:mealTime===t?"#fff":"var(--text)"}}>{l}</div>
+                    <div style={{fontSize:"11px",color:mealTime===t?"rgba(255,255,255,0.8)":"var(--text-muted)",marginTop:"2px"}}>{time}</div>
+                  </button>
+                ))}
+              </div>
+            </div>}
+          </div>
+        )}
+        {activeTab==="menu"&&(
+          <div style={{animation:"fadeUp 0.3s ease-out"}}>
+            <Card style={{marginBottom:"12px"}}>
+              <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>🗓️ Weekly Menu</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+                {days.map(d=>(
+                  <div key={d} style={{display:"flex",gap:"10px",alignItems:"flex-start",background:d===todayKey?"#fff7ed":"transparent",borderRadius:"10px",padding:d===todayKey?"8px":"4px 0",paddingLeft:d===todayKey?"10px":"0"}}>
+                    <div style={{width:"36px",background:d===todayKey?"#f97316":"var(--green-light)",borderRadius:"8px",padding:"5px 0",textAlign:"center",fontSize:"10px",fontWeight:"700",color:d===todayKey?"#fff":"var(--green-deep)",flexShrink:0}}>{d===todayKey?"NOW":dayLabels[d]}</div>
+                    <div style={{fontSize:"13px",color:d===todayKey?"#92400e":"var(--text-soft)",flex:1,paddingTop:"4px",lineHeight:"1.4",fontWeight:d===todayKey?"700":"400"}}>{tiffin.menu[d]}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+        {activeTab==="reviews"&&(
+          <div style={{animation:"fadeUp 0.3s ease-out"}}>
+            <Card style={{marginBottom:"12px"}}>
+              <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>✍️ Write a Review</div>
+              <Stars interactive value={userRating} onChange={setUserRating}/>
+              <textarea value={reviewText} onChange={e=>setReviewText(e.target.value)} placeholder="Share your experience..."
+                style={{width:"100%",marginTop:"12px",padding:"12px",borderRadius:"12px",border:`2px solid var(--input-border)`,fontSize:"13px",fontFamily:"var(--font-body)",outline:"none",resize:"none",height:"80px",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box"}}/>
+              <div style={{marginTop:"10px"}}><Btn onClick={submitReview} disabled={!userRating||!reviewText.trim()} small>Submit Review</Btn></div>
+            </Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"10px",fontFamily:"var(--font)"}}>{localReviews.length} Reviews</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+              {localReviews.map((r,i)=>(
+                <Card key={i}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`hsl(${i*60%360},55%,85%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"800",fontSize:"14px"}}>{r.user[0]}</div>
+                      <div>
+                        <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{r.user}</div>
+                        <div style={{fontSize:"11px",color:"var(--text-muted)"}}>{r.date}</div>
+                      </div>
+                    </div>
+                    <div style={{color:"#f59e0b",fontSize:"13px",fontWeight:"700"}}>{"★".repeat(r.stars)}</div>
+                  </div>
+                  <div style={{fontSize:"13px",color:"var(--text-soft)",lineHeight:"1.5"}}>{r.text}</div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{padding:"14px 20px 28px",background:"var(--card-bg)",borderTop:`1px solid var(--border)`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+          <div>
+            <div style={{fontSize:"10px",color:"var(--text-muted)"}}>{plan==="today"?"Pay once":plan==="daily"?"7-day advance":"Monthly plan"}</div>
+            <div style={{fontWeight:"900",fontSize:"22px",color:plan==="today"?"#f97316":"var(--green-dark)",fontFamily:"var(--font)"}}>₹{amountToPay.toLocaleString()}</div>
+          </div>
+          {plan==="monthly"&&<div style={{background:"#ede9fe",borderRadius:"10px",padding:"6px 12px",textAlign:"center"}}>
+            <div style={{fontSize:"9px",color:"var(--purple)",fontWeight:"800"}}>SAVE ₹{Math.round(perDay*26*0.2)}</div>
+            <div style={{fontSize:"10px",color:"var(--purple)",fontWeight:"600"}}>vs daily plan</div>
+          </div>}
+        </div>
+        <Btn onClick={()=>onSubscribe(plan,amountToPay,mealTime)} style={{background:plan==="today"?"linear-gradient(135deg,#ea580c,#f97316)":undefined,boxShadow:plan==="today"?"0 6px 20px rgba(249,115,22,0.4)":undefined}}>
+          {plan==="today"?`⚡ Order for Today – ₹${amountToPay}`:plan==="daily"?`Subscribe Daily – ₹${amountToPay}`:`Subscribe Monthly – ₹${amountToPay}`} →
+        </Btn>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── ADDRESS SCREEN ──────────────── */
+const AddressScreen = ({onSave, onBack, savedAddresses, onSelectSaved}) => {
+  const [form,setForm] = useState({flat:"",building:"",landmark:"",pincode:"",label:"Home"});
+  const [errors,setErrors] = useState({});
+  const validate = () => {
+    const e={};
+    if(!form.flat) e.flat="Required";
+    if(!form.building) e.building="Required";
+    if(!form.pincode||form.pincode.length!==6) e.pincode="Enter valid 6-digit pincode";
+    setErrors(e); return Object.keys(e).length===0;
+  };
+  const inp = (field) => ({width:"100%",padding:"13px 14px",borderRadius:"12px",border:`2px solid ${errors[field]?"#ef4444":"var(--input-border)"}`,fontSize:"14px",fontFamily:"var(--font-body)",outline:"none",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box",marginBottom:"4px"});
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      <TopBar title="📍 Delivery Address" onBack={onBack}/>
+      <div style={{flex:1,overflowY:"auto",padding:"16px",background:"var(--off-white)"}}>
+        {savedAddresses.length>0&&<div style={{marginBottom:"16px"}}>
+          <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"10px",fontFamily:"var(--font)"}}>🏠 Saved Addresses</div>
+          {savedAddresses.map((a,i)=>(
+            <Card key={i} onClick={()=>onSelectSaved(a)} style={{marginBottom:"8px",cursor:"pointer",border:`2px solid var(--border)`}}>
+              <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+                <span style={{fontSize:"20px"}}>{a.label==="Home"?"🏠":"🏢"}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{a.label}</div>
+                  <div style={{fontSize:"12px",color:"var(--text-muted)"}}>{a.flat}, {a.building}</div>
+                </div>
+                <span style={{color:"var(--green-dark)",fontWeight:"700",fontSize:"13px"}}>Use →</span>
+              </div>
+            </Card>
+          ))}
+          <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"10px",marginTop:"16px",fontFamily:"var(--font)"}}>➕ Add New Address</div>
+        </div>}
+        <Card>
+          <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>
+            {["Home","Work","Other"].map(l=>(
+              <button key={l} onClick={()=>setForm({...form,label:l})} style={{flex:1,padding:"9px",border:`2px solid ${form.label===l?"var(--green)":"var(--border)"}`,borderRadius:"10px",background:form.label===l?"var(--green-light)":"transparent",fontWeight:"700",fontSize:"12px",color:form.label===l?"var(--green-deep)":"var(--text-muted)",cursor:"pointer"}}>{l==="Home"?"🏠":l==="Work"?"🏢":"📍"} {l}</button>
+            ))}
+          </div>
+          {[["flat","Flat/Room No.","e.g. Room 204"],["building","Building/Society","e.g. Yashwant Hostel"],["landmark","Landmark (optional)","e.g. Near Main Gate"],["pincode","Pincode","6-digit pincode"]].map(([f,label,ph])=>(
+            <div key={f} style={{marginBottom:"10px"}}>
+              <div style={{fontSize:"12px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"4px"}}>{label}</div>
+              <input value={form[f]} onChange={e=>setForm({...form,[f]:f==="pincode"?e.target.value.replace(/\D/g,"").slice(0,6):e.target.value})} placeholder={ph} type={f==="pincode"?"tel":"text"} style={inp(f)}/>
+              {errors[f]&&<div style={{fontSize:"11px",color:"#ef4444",marginTop:"2px"}}>{errors[f]}</div>}
+            </div>
+          ))}
+        </Card>
+      </div>
+      <div style={{padding:"14px 20px 28px",background:"var(--card-bg)",borderTop:`1px solid var(--border)`}}>
+        <Btn onClick={()=>validate()&&onSave(form)}>Save & Continue →</Btn>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── PAYMENT SCREEN ──────────────── */
+const PaymentScreen = ({tiffin, plan, amount, mealTime, address, onSuccess, onBack, walletBalance}) => {
+  const [method,setMethod] = useState("upi");
+  const [upi,setUpi] = useState("");
+  const [coupon,setCoupon] = useState("");
+  const [couponApplied,setCouponApplied] = useState(null);
+  const [useWallet,setUseWallet] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const isToday = plan==="today";
+  const planLabel = plan==="today"?`Today · ${mealTime==="lunch"?"Lunch":"Dinner"}`:plan==="daily"?"7-Day Plan":"Monthly Plan";
+  const discount = couponApplied==="FIRST50"?Math.round(amount*0.5):couponApplied==="LUNCHLY20"&&amount>=1000?200:couponApplied==="WELCOME"?100:0;
+  const walletDiscount = useWallet?Math.min(walletBalance,amount-discount):0;
+  const finalAmount = Math.max(amount-discount-walletDiscount,0);
+  const applyCoupon = () => { if(COUPONS[coupon]){setCouponApplied(coupon);}else{alert("Invalid coupon");} };
+  const methods=[{id:"upi",icon:"📱",label:"UPI",desc:"Google Pay, PhonePe, Paytm"},{id:"card",icon:"💳",label:"Card",desc:"Debit / Credit card"},{id:"netbanking",icon:"🏦",label:"Net Banking",desc:"All major banks"},{id:"cod",icon:"💵",label:"Cash on Delivery",desc:"Pay when delivered"}];
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      <div style={{background:isToday?`linear-gradient(135deg,#c2410c,#ea580c)`:`linear-gradient(135deg,var(--green-xdark),#0d3320)`,padding:"48px 20px 16px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"8px"}}>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",flexShrink:0}}>←</button>
+          <div><div style={{fontWeight:"800",fontSize:"17px",color:"#fff"}}>💳 Secure Payment</div><div style={{fontSize:"11px",color:"rgba(255,255,255,0.65)"}}>256-bit SSL encrypted · Razorpay</div></div>
+        </div>
+      </div>
+      <div style={{flex:1,padding:"14px",overflowY:"auto"}}>
+        <div style={{background:isToday?"linear-gradient(135deg,#92400e,#c2410c)":`linear-gradient(135deg,var(--green-xdark),#0d3320)`,borderRadius:"18px",padding:"16px",marginBottom:"12px"}}>
+          <div style={{display:"flex",gap:"12px",alignItems:"center"}}>
+            <div style={{fontSize:"34px"}}>{tiffin.emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:"800",fontSize:"15px",color:"#fff"}}>{tiffin.name}</div>
+              <div style={{color:"rgba(255,255,255,0.65)",fontSize:"12px",marginTop:"3px"}}>{planLabel}</div>
+              {address&&<div style={{color:"rgba(255,255,255,0.55)",fontSize:"11px",marginTop:"2px"}}>📍 {address.flat}, {address.building}</div>}
+            </div>
+          </div>
+          <div style={{background:"rgba(255,255,255,0.1)",borderRadius:"12px",padding:"12px",marginTop:"12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px"}}><span style={{fontSize:"13px",color:"rgba(255,255,255,0.7)"}}>Subtotal</span><span style={{fontSize:"13px",color:"#fff",fontWeight:"700"}}>₹{amount}</span></div>
+            {discount>0&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px"}}><span style={{fontSize:"13px",color:"#4ade80"}}>Coupon ({couponApplied})</span><span style={{fontSize:"13px",color:"#4ade80",fontWeight:"700"}}>-₹{discount}</span></div>}
+            {walletDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px"}}><span style={{fontSize:"13px",color:"#93c5fd"}}>Wallet Credit</span><span style={{fontSize:"13px",color:"#93c5fd",fontWeight:"700"}}>-₹{walletDiscount}</span></div>}
+            <div style={{borderTop:"1px solid rgba(255,255,255,0.15)",paddingTop:"8px",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:"14px",color:"#fff",fontWeight:"700"}}>Total</span><span style={{fontSize:"18px",color:"var(--green)",fontWeight:"900"}}>₹{finalAmount}</span></div>
+          </div>
+        </div>
+        <Card style={{marginBottom:"12px"}}>
+          <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"10px"}}>🎟️ Coupon Code</div>
+          {couponApplied?(
+            <div style={{background:"var(--green-light)",borderRadius:"12px",padding:"12px",display:"flex",justifyContent:"space-between",alignItems:"center",border:`1px solid var(--border-mid)`}}>
+              <div><div style={{fontWeight:"700",color:"var(--green-deep)",fontSize:"13px"}}>✓ {couponApplied} applied!</div><div style={{fontSize:"11px",color:"var(--green-dim)",marginTop:"2px"}}>{COUPONS[couponApplied]} · Saved ₹{discount}</div></div>
+              <button onClick={()=>{setCouponApplied(null);setCoupon("");}} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:"18px"}}>✕</button>
+            </div>
+          ):(
+            <><div style={{display:"flex",gap:"8px"}}>
+              <input value={coupon} onChange={e=>setCoupon(e.target.value.toUpperCase())} placeholder="Enter coupon code" style={{flex:1,padding:"12px",borderRadius:"12px",border:`2px solid var(--input-border)`,fontSize:"13px",fontFamily:"var(--font-body)",outline:"none"}}/>
+              <button onClick={applyCoupon} style={{background:"var(--green-light)",border:`2px solid var(--green)`,borderRadius:"12px",padding:"12px 16px",fontWeight:"700",fontSize:"13px",color:"var(--green-deep)",cursor:"pointer",flexShrink:0}}>Apply</button>
+            </div>
+            <div style={{display:"flex",gap:"6px",marginTop:"8px",flexWrap:"wrap"}}>
+              {Object.keys(COUPONS).map(c=>(<button key={c} onClick={()=>setCoupon(c)} style={{background:"var(--off-white)",border:`1px solid var(--border)`,borderRadius:"8px",padding:"4px 10px",fontSize:"11px",fontWeight:"600",color:"var(--text-muted)",cursor:"pointer"}}>{c}</button>))}
+            </div></>
+          )}
+        </Card>
+        {walletBalance>0&&<Card style={{marginBottom:"12px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+              <span style={{fontSize:"20px"}}>💰</span>
+              <div><div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>Lunchly Wallet</div><div style={{fontSize:"12px",color:"var(--green-dark)",fontWeight:"600"}}>₹{walletBalance} available</div></div>
+            </div>
+            <Toggle value={useWallet} onChange={setUseWallet}/>
+          </div>
+        </Card>}
+        <Card style={{marginBottom:"12px"}}>
+          <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"10px"}}>💳 Payment Method</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+            {methods.map(m=>(
+              <button key={m.id} onClick={()=>setMethod(m.id)} style={{display:"flex",alignItems:"center",gap:"12px",background:method===m.id?isToday?"#fff7ed":"var(--green-light)":"var(--off-white)",border:`2px solid ${method===m.id?isToday?"#f97316":"var(--green)":"var(--border)"}`,borderRadius:"12px",padding:"12px",cursor:"pointer",textAlign:"left"}}>
+                <span style={{fontSize:"22px"}}>{m.icon}</span>
+                <div style={{flex:1}}><div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{m.label}</div><div style={{fontSize:"11px",color:"var(--text-muted)"}}>{m.desc}</div></div>
+                <div style={{width:"18px",height:"18px",borderRadius:"50%",border:`2px solid ${method===m.id?isToday?"#f97316":"var(--green)":"var(--border)"}`,background:method===m.id?isToday?"#f97316":"var(--green)":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {method===m.id&&<span style={{color:"#fff",fontSize:"10px"}}>✓</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+        {method==="upi"&&<Card style={{marginBottom:"12px"}}>
+          <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)",marginBottom:"10px"}}>UPI ID</div>
+          <input value={upi} onChange={e=>setUpi(e.target.value)} placeholder="yourname@paytm" style={{width:"100%",padding:"12px",borderRadius:"12px",border:`2px solid var(--input-border)`,fontSize:"14px",fontFamily:"var(--font-body)",outline:"none",marginBottom:"10px",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+            {["@okaxis","@ybl","@paytm","@gpay"].map(s=>(<button key={s} onClick={()=>setUpi("yourname"+s)} style={{background:"var(--green-light)",border:"none",borderRadius:"8px",padding:"5px 10px",fontSize:"11px",fontWeight:"600",color:"var(--green-deep)",cursor:"pointer"}}>{s}</button>))}
+          </div>
+        </Card>}
+      </div>
+      <div style={{padding:"14px 20px 28px",background:"var(--card-bg)",borderTop:`1px solid var(--border)`}}>
+        <Btn onClick={()=>{setLoading(true);setTimeout(()=>{setLoading(false);onSuccess();},1800);}} loading={loading} style={{background:isToday?"linear-gradient(135deg,#ea580c,#f97316)":undefined,boxShadow:isToday?"0 6px 20px rgba(249,115,22,0.4)":undefined}}>
+          {isToday?`⚡ Pay ₹${finalAmount} – Order Now`:`Pay ₹${finalAmount} & Subscribe`}
+        </Btn>
+        <div style={{textAlign:"center",marginTop:"10px",fontSize:"11px",color:"var(--text-muted)"}}>🔒 Safe & Secure · Powered by Razorpay</div>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── CONFIRM SCREEN ──────────────── */
+const ConfirmScreen = ({tiffin, plan, amount, mealTime, address, onHome, onMyOrders}) => (
+  <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"844px",background:"var(--off-white)",padding:"28px"}}>
+    <div style={{animation:"pop 0.7s cubic-bezier(0.34,1.56,0.64,1) both",fontSize:"80px",marginBottom:"20px"}}>🎉</div>
+    <div style={{fontWeight:"900",fontSize:"26px",color:"var(--text)",textAlign:"center",fontFamily:"var(--font)",marginBottom:"8px"}}>Order Confirmed!</div>
+    <div style={{color:"var(--text-muted)",fontSize:"14px",textAlign:"center",marginBottom:"24px"}}>Your tiffin is being prepared with love 💚</div>
+    <Card style={{width:"100%",marginBottom:"16px",textAlign:"center"}}>
+      <div style={{fontSize:"40px",marginBottom:"12px"}}>{tiffin.emoji}</div>
+      <div style={{fontWeight:"800",fontSize:"18px",color:"var(--text)",fontFamily:"var(--font)"}}>{tiffin.name}</div>
+      <div style={{color:"var(--text-muted)",fontSize:"13px",marginTop:"4px"}}>{plan==="today"?`Today · ${mealTime==="lunch"?"Lunch":"Dinner"}`:plan==="daily"?"7-Day Plan":"Monthly Plan"} · ₹{amount}</div>
+      {address&&<div style={{color:"var(--text-muted)",fontSize:"12px",marginTop:"4px"}}>📍 {address.flat}, {address.building}</div>}
+    </Card>
+    <div style={{display:"flex",flexDirection:"column",gap:"10px",width:"100%"}}>
+      <Btn onClick={onMyOrders} variant="ghost">📦 Track My Order</Btn>
+      <Btn onClick={onHome} variant="outline">Back to Home 🏠</Btn>
+    </div>
+  </div>
+);
+
+/* ──────────────── MY ORDERS ──────────────── */
+const MyOrders = ({orders, onBack, onCancelOrder}) => {
+  const [tab,setTab] = useState("active");
+  const active=orders.filter(o=>o.status!=="delivered");
+  const past=orders.filter(o=>o.status==="delivered");
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      <TopBar title="📦 My Orders" subtitle={`${orders.length} total orders`} onBack={onBack}/>
+      <div style={{display:"flex",borderBottom:`2px solid var(--border)`,background:"var(--card-bg)"}}>
+        {[["active",`Active (${active.length})`],["past",`Past (${past.length})`]].map(([t,l])=>(
+          <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"12px 8px",border:"none",background:"none",fontWeight:"700",fontSize:"13px",color:tab===t?"var(--green-dark)":"var(--text-muted)",borderBottom:`2px solid ${tab===t?"var(--green)":"transparent"}`,cursor:"pointer",marginBottom:"-2px"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+        {(tab==="active"?active:past).length===0&&(
+          <div style={{textAlign:"center",padding:"60px 20px",color:"var(--text-muted)"}}>
+            <div style={{fontSize:"48px",marginBottom:"16px"}}>{tab==="active"?"📭":"🕐"}</div>
+            <div style={{fontWeight:"700",fontSize:"16px",color:"var(--text)",marginBottom:"8px"}}>{tab==="active"?"No active orders":"No past orders yet"}</div>
+            <div style={{fontSize:"13px"}}>{tab==="active"?"Subscribe to a tiffin to get started":"Your completed orders will appear here"}</div>
+          </div>
+        )}
+        <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
+          {(tab==="active"?active:past).map((order,i)=>(
+            <Card key={order.id} style={{animation:`fadeUp 0.4s ease-out ${i*0.06}s both`}}>
+              <div style={{display:"flex",gap:"12px",alignItems:"flex-start",marginBottom:"12px"}}>
+                <div style={{width:"48px",height:"48px",borderRadius:"14px",background:"var(--green-light)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:0}}>{order.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",fontFamily:"var(--font)"}}>{order.tiffin}</div>
+                    <StatusBadge status={order.status}/>
+                  </div>
+                  <div style={{fontSize:"12px",color:"var(--text-muted)",marginTop:"3px"}}>{order.plan} Plan · ₹{order.amount}</div>
+                  <div style={{fontSize:"11px",color:"var(--text-muted)"}}>#{order.id} · {order.date}</div>
+                </div>
+              </div>
+              {tab==="active"&&(
+                <div style={{marginBottom:"12px"}}>
+                  <div style={{background:"var(--border)",borderRadius:"100px",height:"6px",overflow:"hidden"}}>
+                    <div style={{width:order.status==="preparing"?"40%":order.status==="out_for_delivery"?"70%":"100%",height:"100%",background:`linear-gradient(135deg,var(--green-dark),var(--green))`,borderRadius:"100px",transition:"width 0.5s"}}/>
+                  </div>
+                </div>
+              )}
+              {tab==="active"&&order.plan!=="Today"&&(
+                <div style={{display:"flex",gap:"8px"}}>
+                  <Btn small variant="ghost" onClick={()=>alert("Subscription paused!")}>⏸ Pause</Btn>
+                  <Btn small variant="danger" onClick={()=>onCancelOrder(order.id)}>Cancel</Btn>
+                </div>
+              )}
+              {tab==="past"&&<div style={{display:"flex",gap:"8px"}}>
+                <Btn small variant="ghost" onClick={()=>alert("Reorder coming soon!")}>🔄 Reorder</Btn>
+                <Btn small variant="outline">⭐ Rate</Btn>
+              </div>}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── NOTIFICATIONS ──────────────── */
+const NotificationsScreen = ({notifications, onBack, onMarkRead}) => (
+  <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+    <TopBar title="🔔 Notifications" subtitle={`${notifications.filter(n=>!n.read).length} unread`} onBack={onBack}
+      right={<button onClick={onMarkRead} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"10px",padding:"6px 12px",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer"}}>Mark All Read</button>}/>
+    <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+        {notifications.map((n,i)=>(
+          <Card key={n.id} style={{animation:`fadeUp 0.3s ease-out ${i*0.05}s both`,borderLeft:`3px solid ${n.read?"var(--border)":"var(--green)"}`,opacity:n.read?0.7:1}}>
+            <div style={{display:"flex",gap:"12px",alignItems:"flex-start"}}>
+              <div style={{width:"44px",height:"44px",borderRadius:"14px",background:n.read?"var(--off-white)":"var(--green-light)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>{n.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{n.title}</div>
+                  {!n.read&&<span style={{width:"8px",height:"8px",borderRadius:"50%",background:"var(--green)",display:"inline-block",flexShrink:0,marginTop:"4px"}}/>}
+                </div>
+                <div style={{fontSize:"12px",color:"var(--text-soft)",marginTop:"3px"}}>{n.msg}</div>
+                <div style={{fontSize:"10px",color:"var(--text-muted)",marginTop:"4px"}}>{n.time}</div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+/* ──────────────── USER PROFILE ──────────────── */
+const UserProfile = ({user, orders, savedAddresses, walletBalance, notifications, onBack, onLogout}) => {
+  const [tab,setTab] = useState("profile");
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      <TopBar title="👤 My Profile" onBack={onBack}/>
+      <div style={{display:"flex",borderBottom:`2px solid var(--border)`,background:"var(--card-bg)"}}>
+        {[["profile","Profile"],["addresses","📍 Saved"],["wallet","💰 Wallet"]].map(([t,l])=>(
+          <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"11px 4px",border:"none",background:"none",fontWeight:"700",fontSize:"12px",color:tab===t?"var(--green-dark)":"var(--text-muted)",borderBottom:`2px solid ${tab===t?"var(--green)":"transparent"}`,cursor:"pointer",marginBottom:"-2px"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+        {tab==="profile"&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          <Card style={{marginBottom:"12px",textAlign:"center"}}>
+            <div style={{width:"80px",height:"80px",borderRadius:"50%",background:`linear-gradient(135deg,var(--green-dark),var(--green))`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"900",fontSize:"32px",color:"#fff",margin:"0 auto 12px"}}>{(user?.name||"U")[0].toUpperCase()}</div>
+            <div style={{fontWeight:"800",fontSize:"18px",color:"var(--text)",fontFamily:"var(--font)"}}>{user?.name||"Customer"}</div>
+            <div style={{color:"var(--text-muted)",fontSize:"13px",marginTop:"4px"}}>📱 +91 {user?.phone||"XXXXXXXXXX"}</div>
+            <div style={{display:"flex",gap:"12px",justifyContent:"center",marginTop:"14px"}}>
+              {[{l:"Orders",v:orders.length,emoji:"📦"},{l:"Wallet",v:`₹${walletBalance}`,emoji:"💰"},{l:"Saved",v:savedAddresses.length,emoji:"📍"}].map(s=>(
+                <div key={s.l} style={{textAlign:"center"}}>
+                  <div style={{fontSize:"16px"}}>{s.emoji}</div>
+                  <div style={{fontWeight:"900",fontSize:"16px",color:"var(--green-dark)",fontFamily:"var(--font)"}}>{s.v}</div>
+                  <div style={{fontSize:"10px",color:"var(--text-muted)"}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+          {/* Referral system */}
+          <Card style={{marginBottom:"12px"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>🎁 Refer & Earn</div>
+            <div style={{background:"var(--green-light)",borderRadius:"12px",padding:"14px",border:`1px solid var(--border-mid)`}}>
+              <div style={{fontWeight:"700",fontSize:"13px",color:"var(--green-deep)",marginBottom:"6px"}}>Your referral code</div>
+              <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                <code style={{flex:1,background:"var(--card-bg)",padding:"10px 14px",borderRadius:"10px",fontSize:"16px",fontWeight:"800",color:"var(--green-dark)",letterSpacing:"2px",border:`1px solid var(--border)`}}>LNCH{(user?.phone||"XXXX").slice(-4)}</code>
+                <button onClick={()=>alert("Code copied!")} style={{background:"var(--green)",color:"#fff",border:"none",borderRadius:"10px",padding:"10px 14px",fontWeight:"700",cursor:"pointer",fontSize:"13px"}}>Copy</button>
+              </div>
+              <div style={{fontSize:"12px",color:"var(--green-dim)",marginTop:"8px"}}>Both you and your friend get ₹150 wallet credit on first order!</div>
+            </div>
+            <div style={{marginTop:"12px",display:"flex",gap:"8px"}}>
+              <div style={{flex:1,background:"var(--off-white)",borderRadius:"10px",padding:"10px",textAlign:"center",border:`1px solid var(--border)`}}>
+                <div style={{fontWeight:"800",fontSize:"18px",color:"var(--green-dark)"}}>0</div>
+                <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"2px"}}>Friends invited</div>
+              </div>
+              <div style={{flex:1,background:"var(--off-white)",borderRadius:"10px",padding:"10px",textAlign:"center",border:`1px solid var(--border)`}}>
+                <div style={{fontWeight:"800",fontSize:"18px",color:"var(--orange)"}}>₹0</div>
+                <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"2px"}}>Earned so far</div>
+              </div>
+            </div>
+          </Card>
+          <Btn variant="danger" onClick={onLogout}>Logout</Btn>
+        </div>}
+        {tab==="addresses"&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          {savedAddresses.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-muted)"}}>
+            <div style={{fontSize:"40px",marginBottom:"12px"}}>📍</div>
+            <div style={{fontWeight:"700",color:"var(--text)"}}>No saved addresses</div>
+            <div style={{fontSize:"13px",marginTop:"6px"}}>Addresses saved during checkout appear here</div>
+          </div>}
+          <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+            {savedAddresses.map((a,i)=>(
+              <Card key={i}><div style={{display:"flex",gap:"12px",alignItems:"flex-start"}}>
+                <div style={{width:"44px",height:"44px",borderRadius:"14px",background:"var(--green-light)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexShrink:0}}>{a.label==="Home"?"🏠":"🏢"}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)"}}>{a.label}</div>
+                  <div style={{fontSize:"12px",color:"var(--text-soft)",marginTop:"2px"}}>{a.flat}, {a.building}</div>
+                  {a.landmark&&<div style={{fontSize:"11px",color:"var(--text-muted)"}}>Near {a.landmark}</div>}
+                  <div style={{fontSize:"11px",color:"var(--text-muted)"}}>Pin: {a.pincode}</div>
+                </div>
+              </div></Card>
+            ))}
+          </div>
+        </div>}
+        {tab==="wallet"&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          <Card style={{marginBottom:"12px",background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`}}>
+            <div style={{color:"rgba(255,255,255,0.6)",fontSize:"13px"}}>Lunchly Wallet Balance</div>
+            <div style={{fontWeight:"900",fontSize:"40px",color:"var(--green)",marginTop:"4px",fontFamily:"var(--font)"}}>₹{walletBalance}</div>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:"12px",marginTop:"4px"}}>Use at checkout for instant discount</div>
+          </Card>
+          <Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>📊 Transaction History</div>
+            {[{t:"Referral Bonus",a:"+₹150",d:"Today",c:"var(--green)"},{t:"Coupon WELCOME",a:"+₹100",d:"2 days ago",c:"var(--green)"},{t:"Order Payment",a:"-₹1800",d:"Mar 1",c:"#ef4444"}].map((tx,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<2?`1px solid var(--border)`:"none"}}>
+                <div><div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{tx.t}</div><div style={{fontSize:"11px",color:"var(--text-muted)"}}>{tx.d}</div></div>
+                <div style={{fontWeight:"800",fontSize:"14px",color:tx.c}}>{tx.a}</div>
+              </div>
+            ))}
+          </Card>
+        </div>}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── PROVIDER LOGIN ──────────────── */
+const ProviderLogin = ({onLogin, onBack, onRegister}) => {
+  const [phone,setPhone] = useState("");
+  const [pass,setPass] = useState("");
+  const [loading,setLoading] = useState(false);
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      {/* Launch offer banner for providers */}
+      <div style={{background:"linear-gradient(135deg,#f97316,#ea580c)",padding:"10px 16px",display:"flex",gap:"10px",alignItems:"center"}}>
+        <span style={{fontSize:"16px"}}>🎉</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:"700",fontSize:"12px",color:"#fff"}}>Launch Offer: 0% Commission!</div>
+          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.8)"}}>Keep 100% of your earnings during our launch period</div>
+        </div>
+      </div>
+      <div style={{background:`linear-gradient(160deg,var(--green-xdark),#0d3320)`,padding:"48px 28px 44px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <button onClick={onBack} style={{position:"absolute",top:"48px",left:"20px",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer"}}>←</button>
+        <div style={{fontSize:"56px",animation:"pop 0.6s ease-out both"}}>👨‍🍳</div>
+        <div style={{fontWeight:"900",fontSize:"24px",color:"#fff",marginTop:"14px",fontFamily:"var(--font)"}}>Provider Login</div>
+        <div style={{color:"var(--green-mid)",fontSize:"13px",marginTop:"6px"}}>Manage your tiffin business</div>
+      </div>
+      <div style={{flex:1,padding:"28px 24px",background:"var(--off-white)"}}>
+        <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"6px"}}>Phone Number</div>
+        <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Enter registered phone" type="tel"
+          style={{width:"100%",padding:"14px",borderRadius:"14px",border:`2px solid var(--input-border)`,fontSize:"15px",fontFamily:"var(--font-body)",outline:"none",marginBottom:"12px",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box"}}/>
+        <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"6px"}}>Password</div>
+        <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Enter password" type="password"
+          style={{width:"100%",padding:"14px",borderRadius:"14px",border:`2px solid var(--input-border)`,fontSize:"15px",fontFamily:"var(--font-body)",outline:"none",marginBottom:"20px",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box"}}/>
+        <Btn onClick={()=>{setLoading(true);setTimeout(()=>{setLoading(false);onLogin();},1500);}} loading={loading}>Login →</Btn>
+        <div style={{textAlign:"center",marginTop:"20px"}}>
+          <div style={{fontSize:"13px",color:"var(--text-muted)",marginBottom:"8px"}}>New provider?</div>
+          <button onClick={onRegister} style={{background:"none",border:"none",color:"var(--green-dark)",fontWeight:"700",fontSize:"14px",cursor:"pointer",textDecoration:"underline"}}>Register Your Kitchen →</button>
+        </div>
+        <Card style={{marginTop:"20px",background:"var(--green-light)",border:`1px solid var(--border-mid)`}}>
+          <div style={{fontSize:"12px",color:"var(--green-deep)",lineHeight:"1.6"}}>
+            <strong>🏷️ Why join Lunchly?</strong><br/>
+            • 0% commission during our entire launch period<br/>
+            • Direct payments to your bank account daily<br/>
+            • We handle customer acquisition — you focus on cooking<br/>
+            • Simple dashboard to manage orders & menu
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── PROVIDER REGISTER ──────────────── */
+const ProviderRegister = ({onBack, onSuccess}) => {
+  const [step,setStep] = useState(1);
+  const [form,setForm] = useState({ownerName:"",phone:"",email:"",messName:"",area:"",address:"",foodType:"veg",deliverySlot:"lunch",maxCapacity:"20",monthlyPrice:"1500",tag:"Best Seller",emoji:"🥘",fssai:""});
+  const [errors,setErrors] = useState({});
+  const upd = (k,v)=>setForm(p=>({...p,[k]:v}));
+  const validate = () => {
+    const e={};
+    if(step===1){if(!form.ownerName)e.ownerName="Required";if(form.phone.length<10)e.phone="Enter valid phone";}
+    if(step===2){if(!form.messName)e.messName="Required";if(!form.area)e.area="Required";}
+    setErrors(e);return Object.keys(e).length===0;
+  };
+  const next = () => { if(!validate()) return; if(step<3) setStep(step+1); else onSuccess(form); };
+  const inp=(key)=>({width:"100%",padding:"13px 14px",borderRadius:"12px",border:`2px solid ${errors[key]?"#ef4444":"var(--input-border)"}`,fontSize:"14px",fontFamily:"var(--font-body)",outline:"none",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box",marginBottom:"4px"});
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px"}}>
+      {/* 0% commission banner */}
+      <div style={{background:"linear-gradient(135deg,#f97316,#ea580c)",padding:"10px 20px",display:"flex",gap:"10px",alignItems:"center",animation:"glowPulse 2s infinite"}}>
+        <span style={{fontSize:"20px"}}>🎉</span>
+        <div><div style={{fontWeight:"700",fontSize:"12px",color:"#fff"}}>0% Commission – Launch Period</div><div style={{fontSize:"11px",color:"rgba(255,255,255,0.85)"}}>You keep 100% of your revenue. Forever during launch.</div></div>
+      </div>
+      <div style={{background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`,padding:"20px 20px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}}>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer"}}>←</button>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"900",fontSize:"18px",color:"#fff",fontFamily:"var(--font)"}}>Register Your Kitchen</div>
+            <div style={{color:"var(--green-mid)",fontSize:"12px"}}>Step {step} of 3</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:"6px"}}>
+          {[1,2,3].map(s=><div key={s} style={{flex:1,height:"4px",borderRadius:"2px",background:s<=step?"var(--green)":"rgba(255,255,255,0.2)",transition:"background 0.3s"}}/>)}
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"16px",background:"var(--off-white)"}}>
+        {step===1&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"16px",color:"var(--text)",marginBottom:"16px",fontFamily:"var(--font)"}}>👤 Personal Details</div>
+          {[["ownerName","Full Name","Your full name"],["phone","Phone Number","10-digit mobile"],["email","Email (optional)","yourname@gmail.com"]].map(([k,l,ph])=>(
+            <div key={k} style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"4px"}}>{l}</div>
+              <input value={form[k]} onChange={e=>upd(k,e.target.value)} placeholder={ph} style={inp(k)}/>
+              {errors[k]&&<div style={{fontSize:"11px",color:"#ef4444"}}>{errors[k]}</div>}
+            </div>
+          ))}
+        </div>}
+        {step===2&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"16px",color:"var(--text)",marginBottom:"16px",fontFamily:"var(--font)"}}>🏪 Kitchen Details</div>
+          {[["messName","Kitchen/Mess Name","e.g. Amma's Kitchen"],["address","Full Address","Building, street, area"]].map(([k,l,ph])=>(
+            <div key={k} style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"4px"}}>{l}</div>
+              <input value={form[k]} onChange={e=>upd(k,e.target.value)} placeholder={ph} style={inp(k)}/>
+              {errors[k]&&<div style={{fontSize:"11px",color:"#ef4444"}}>{errors[k]}</div>}
+            </div>
+          ))}
+          <div style={{marginBottom:"12px"}}>
+            <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"8px"}}>Area</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+              {AREAS.map(a=><button key={a} onClick={()=>upd("area",a)} style={{padding:"10px",border:`2px solid ${form.area===a?"var(--green)":"var(--border)"}`,borderRadius:"10px",background:form.area===a?"var(--green-light)":"var(--card-bg)",fontWeight:"600",fontSize:"12px",color:form.area===a?"var(--green-deep)":"var(--text-muted)",cursor:"pointer"}}>{a}</button>)}
+            </div>
+            {errors.area&&<div style={{fontSize:"11px",color:"#ef4444",marginTop:"4px"}}>{errors.area}</div>}
+          </div>
+          <div style={{marginBottom:"12px"}}>
+            <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"8px"}}>Food Type</div>
+            <div style={{display:"flex",gap:"8px"}}>
+              {[["veg","🟢 Veg"],["non-veg","🔴 Non-Veg"],["both","Both"]].map(([v,l])=><button key={v} onClick={()=>upd("foodType",v)} style={{flex:1,padding:"10px",border:`2px solid ${form.foodType===v?"var(--green)":"var(--border)"}`,borderRadius:"10px",background:form.foodType===v?"var(--green-light)":"var(--card-bg)",fontWeight:"700",fontSize:"12px",color:form.foodType===v?"var(--green-deep)":"var(--text-muted)",cursor:"pointer"}}>{l}</button>)}
+            </div>
+          </div>
+        </div>}
+        {step===3&&<div style={{animation:"fadeUp 0.3s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"16px",color:"var(--text)",marginBottom:"16px",fontFamily:"var(--font)"}}>⚙️ Service Details</div>
+          {[["monthlyPrice","Monthly Subscription Price (₹)","e.g. 1500"],["maxCapacity","Max Daily Capacity","e.g. 20 tiffins/day"]].map(([k,l,ph])=>(
+            <div key={k} style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"4px"}}>{l}</div>
+              <input value={form[k]} onChange={e=>upd(k,e.target.value)} placeholder={ph} type="number" style={inp(k)}/>
+            </div>
+          ))}
+          <div style={{marginBottom:"12px"}}>
+            <div style={{fontSize:"13px",fontWeight:"700",color:"var(--text-soft)",marginBottom:"8px"}}>Delivery Slot</div>
+            <div style={{display:"flex",gap:"8px"}}>
+              {[["lunch","🍱 Lunch"],["dinner","🌙 Dinner"],["both","Both"]].map(([v,l])=><button key={v} onClick={()=>upd("deliverySlot",v)} style={{flex:1,padding:"10px",border:`2px solid ${form.deliverySlot===v?"var(--green)":"var(--border)"}`,borderRadius:"10px",background:form.deliverySlot===v?"var(--green-light)":"var(--card-bg)",fontWeight:"700",fontSize:"12px",color:form.deliverySlot===v?"var(--green-deep)":"var(--text-muted)",cursor:"pointer"}}>{l}</button>)}
+            </div>
+          </div>
+          <Card style={{background:"#fffbeb",border:"1px solid #fde68a"}}>
+            <div style={{fontSize:"12px",color:"#92400e",lineHeight:"1.6"}}>
+              <strong>📋 By registering, you agree to:</strong><br/>
+              • Maintain food quality standards set by Lunchly<br/>
+              • Deliver on time as per your listed slots<br/>
+              • FSSAI compliance (license required within 30 days)<br/>
+              • Lunchly platform terms & conditions
+            </div>
+          </Card>
+        </div>}
+      </div>
+      <div style={{padding:"14px 20px 28px",background:"var(--card-bg)",borderTop:`1px solid var(--border)`}}>
+        <div style={{display:"flex",gap:"10px"}}>
+          {step>1&&<Btn variant="outline" onClick={()=>{setErrors({});setStep(step-1);}} style={{maxWidth:"80px"}}>← Back</Btn>}
+          <Btn onClick={next} style={{flex:1}}>{step===3?"🚀 Submit & Go Live":"Next →"}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── PROVIDER DASHBOARD (UPGRADED) ──────────────── */
+const ProviderDashboard = ({onBack, providerData, platformConfig}) => {
+  const [tab,setTab] = useState("dashboard");
+  const displayName = providerData?.messName || "Amma's Kitchen";
+  const displayOwner = providerData?.ownerName || "Sunita Devi";
+  const isNewProvider = !!providerData;
+  const [orders,setOrders] = useState(isNewProvider ? [] : PROVIDER_ORDERS);
+  const [menuEdit,setMenuEdit] = useState(false);
+  const defaultMenu = {mon:"Dal, Rice, Roti, Sabzi",tue:"Dal Fry, Rice, Roti, Salad",wed:"Mix Veg, Roti, Rice, Papad",thu:"Chole, Puri, Raita",fri:"Paneer Curry, Rice, Roti",sat:"Aloo Gobi, Dal, Rice, Roti",sun:"Special Thali"};
+  const [menuItems,setMenuItems] = useState(providerData ? defaultMenu : TIFFINS[0].menu);
+  const markDelivered = id => setOrders(prev=>prev.map(o=>o.id===id?{...o,status:"delivered"}:o));
+  const pending = orders.filter(o=>o.status==="pending");
+  const delivered = orders.filter(o=>o.status==="delivered");
+
+  // Revenue data
+  const revenueData = isNewProvider
+    ? [{m:"Oct",v:0},{m:"Nov",v:0},{m:"Dec",v:0},{m:"Jan",v:0},{m:"Feb",v:0},{m:"Mar",v:0}]
+    : [{m:"Oct",v:48000},{m:"Nov",v:62000},{m:"Dec",v:55000},{m:"Jan",v:78000},{m:"Feb",v:91000},{m:"Mar",v:105000}];
+  const totalRevenue = isNewProvider ? 0 : 439000;
+  const totalOrders = isNewProvider ? 0 : 780;
+  const currentCommission = calculateCommission(totalRevenue, platformConfig);
+  const simulatedCommission5 = simulateCommission(totalRevenue, 5);
+  const simulatedCommission8 = simulateCommission(platformConfig.postLaunchRate, totalRevenue) ;
+  const sim8 = simulateCommission(totalRevenue, platformConfig.postLaunchRate);
+
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      {/* 0% Commission Banner — always visible */}
+      <div style={{background:"linear-gradient(135deg,#f97316,#ea580c)",padding:"10px 20px",display:"flex",gap:"12px",alignItems:"center",animation:"glowPulse 3s infinite"}}>
+        <span style={{fontSize:"20px"}}>🎉</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:"800",fontSize:"12px",color:"#fff"}}>{platformConfig.launchMessage}</div>
+          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.85)",marginTop:"2px"}}>You are currently on <strong>0% commission</strong>. Future rate: {platformConfig.postLaunchRate}% (announced 30 days in advance)</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.2)",borderRadius:"8px",padding:"3px 10px",fontSize:"10px",color:"#fff",fontWeight:"700",flexShrink:0}}>LAUNCH</div>
+      </div>
+
+      {isNewProvider&&(
+        <div style={{background:"linear-gradient(135deg,#22c55e,#16a34a)",padding:"10px 20px",display:"flex",gap:"10px",alignItems:"center"}}>
+          <span style={{fontSize:"16px"}}>🚀</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"700",fontSize:"12px",color:"#fff"}}>Welcome, {displayOwner}! Your listing is live.</div>
+            <div style={{fontSize:"11px",color:"rgba(255,255,255,0.8)"}}>Add your weekly menu to attract customers.</div>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:`linear-gradient(135deg,var(--green-xdark),var(--green-dim))`,padding:"20px 20px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"16px"}}>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",flexShrink:0}}>←</button>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"900",fontSize:"18px",color:"#fff",fontFamily:"var(--font)"}}>{providerData?.emoji||"🥘"} {displayName}</div>
+            <div style={{color:"var(--green-mid)",fontSize:"12px"}}>👨‍🍳 {displayOwner} · Provider Dashboard</div>
+          </div>
+          <div style={{width:"42px",height:"42px",borderRadius:"50%",background:"var(--green)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"800",fontSize:"16px",color:"#fff"}}>{displayOwner[0]}</div>
+        </div>
+        <div style={{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px"}}>
+          {[["dashboard","Dashboard"],["orders","Orders"],["earnings","Earnings"],["menu","Menu"],["subscribers","Subscribers"]].map(([t,l])=>(
+            <button key={t} onClick={()=>setTab(t)} style={{background:tab===t?"var(--green)":"rgba(255,255,255,0.12)",border:"none",borderRadius:"100px",padding:"7px 14px",color:"#fff",fontWeight:"700",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap",boxShadow:tab===t?"0 4px 12px rgba(34,197,94,0.4)":"none"}}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+
+        {/* DASHBOARD TAB */}
+        {tab==="dashboard"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            <StatCard icon="📦" value={isNewProvider?"0":totalOrders} label="Total Orders" sub={isNewProvider?"Start growing!":"All time"} color="var(--green)"/>
+            <StatCard icon="👥" value={isNewProvider?"0":"34"} label="Subscribers" sub={isNewProvider?"No subs yet":"+3 this week"} color="var(--blue)"/>
+            <StatCard icon="💰" value={isNewProvider?"₹0":`₹${(totalRevenue/1000).toFixed(0)}K`} label="Total Revenue" sub={isNewProvider?"No orders yet":"All time GMV"} color="var(--orange)"/>
+            <StatCard icon="⭐" value={isNewProvider?"New ✨":"4.8 ★"} label="Rating" sub={isNewProvider?"First review pending":"142 reviews"} color="var(--yellow)"/>
+          </div>
+
+          {/* Commission status */}
+          <Card style={{marginBottom:"14px",border:"2px solid #fed7aa",background:"#fff7ed"}}>
+            <div style={{display:"flex",gap:"12px",alignItems:"flex-start"}}>
+              <span style={{fontSize:"24px"}}>🏷️</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:"800",fontSize:"14px",color:"#92400e",fontFamily:"var(--font)"}}>Commission Structure</div>
+                <div style={{display:"flex",gap:"12px",marginTop:"10px"}}>
+                  <div style={{flex:1,background:"#dcfce7",borderRadius:"10px",padding:"10px",textAlign:"center"}}>
+                    <div style={{fontWeight:"900",fontSize:"22px",color:"#15803d"}}>0%</div>
+                    <div style={{fontSize:"11px",color:"#166534",fontWeight:"700",marginTop:"2px"}}>Current Rate</div>
+                    <div style={{fontSize:"10px",color:"#16a34a",marginTop:"2px"}}>Launch offer active</div>
+                  </div>
+                  <div style={{flex:1,background:"#fef3c7",borderRadius:"10px",padding:"10px",textAlign:"center"}}>
+                    <div style={{fontWeight:"900",fontSize:"22px",color:"#92400e"}}>{platformConfig.postLaunchRate}%</div>
+                    <div style={{fontSize:"11px",color:"#92400e",fontWeight:"700",marginTop:"2px"}}>Future Rate</div>
+                    <div style={{fontSize:"10px",color:"#a16207",marginTop:"2px"}}>Post-launch period</div>
+                  </div>
+                </div>
+                <div style={{fontSize:"11px",color:"#c2410c",marginTop:"10px",padding:"8px",background:"rgba(249,115,22,0.1)",borderRadius:"8px"}}>
+                  💡 Commission changes will be notified 30 days in advance. You always stay in control.
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Revenue chart */}
+          <Card style={{marginBottom:"14px"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"14px",fontFamily:"var(--font)"}}>📈 Monthly Revenue (₹)</div>
+            <MiniBarChart data={revenueData} height={100}/>
+          </Card>
+
+          {/* Today's summary */}
+          <Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>📊 Today's Summary</div>
+            <div style={{display:"flex",justifyContent:"space-around",textAlign:"center",marginBottom:"14px"}}>
+              {[["✅",delivered.length,"Delivered","var(--green)"],["⏳",pending.length,"Pending","var(--orange)"],["💰","₹1,260","Earned","var(--blue)"]].map(([e,v,l,c])=>(
+                <div key={l}><div style={{fontWeight:"900",fontSize:"22px",color:c,fontFamily:"var(--font)"}}>{v}</div><div style={{fontSize:"10px",color:"var(--text-muted)",marginTop:"4px"}}>{e} {l}</div></div>
+              ))}
+            </div>
+            {orders.length>0&&<div style={{background:"var(--off-white)",borderRadius:"10px",padding:"10px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px"}}>
+                <span style={{fontSize:"12px",fontWeight:"700",color:"var(--text)"}}>Completion Rate</span>
+                <span style={{fontSize:"12px",fontWeight:"700",color:"var(--green)"}}>{Math.round((delivered.length/orders.length)*100)}%</span>
+              </div>
+              <div style={{background:"var(--border)",borderRadius:"100px",height:"8px",overflow:"hidden"}}>
+                <div style={{width:`${(delivered.length/orders.length)*100}%`,height:"100%",background:`linear-gradient(135deg,var(--green-dark),var(--green))`,borderRadius:"100px",transition:"width 1s ease"}}/>
+              </div>
+            </div>}
+          </Card>
+        </div>}
+
+        {/* EARNINGS / COMMISSION TAB */}
+        {tab==="earnings"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          {/* Revenue Analytics */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            <StatCard icon="💰" value={isNewProvider?"₹0":`₹${(totalRevenue/1000).toFixed(0)}K`} label="Total Revenue" sub="All time GMV" color="var(--orange)"/>
+            <StatCard icon="🏷️" value="₹0" label="Platform Commission" sub="0% launch rate active" color="var(--green)"/>
+            <StatCard icon="📦" value={isNewProvider?"0":totalOrders} label="Total Orders" sub="All time" color="var(--blue)"/>
+            <StatCard icon="📅" value={isNewProvider?"₹0":"₹105K"} label="This Month" sub="March 2025" color="var(--purple)"/>
+          </div>
+
+          {/* Commission simulation */}
+          <Card style={{marginBottom:"14px",border:"2px solid var(--border-mid)"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"4px",fontFamily:"var(--font)"}}>🔮 Commission Projection</div>
+            <div style={{fontSize:"12px",color:"var(--text-muted)",marginBottom:"14px"}}>What commission would look like at different rates (for planning)</div>
+            {[
+              {rate:0,label:"Current (Launch)",commission:0,color:"#15803d",bg:"#dcfce7",note:"Active now"},
+              {rate:5,label:"5% (Possible)",commission:simulateCommission(totalRevenue,5),color:"#a16207",bg:"#fef9c3",note:"Illustrative"},
+              {rate:platformConfig.postLaunchRate,label:`${platformConfig.postLaunchRate}% (Future max)`,commission:simulateCommission(totalRevenue,platformConfig.postLaunchRate),color:"#c2410c",bg:"#fee2e2",note:"Post-launch"},
+            ].map(row=>(
+              <div key={row.rate} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px",background:row.bg,borderRadius:"12px",marginBottom:"8px",border:`1px solid ${row.color}22`}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:"700",fontSize:"13px",color:row.color}}>{row.label}</div>
+                  <div style={{fontSize:"11px",color:row.color,opacity:0.7,marginTop:"2px"}}>{row.note}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:"900",fontSize:"18px",color:row.color,fontFamily:"var(--font)"}}>₹{row.commission.toLocaleString()}</div>
+                  <div style={{fontSize:"10px",color:row.color,opacity:0.7}}>on ₹{(totalRevenue/1000).toFixed(0)}K GMV</div>
+                </div>
+              </div>
+            ))}
+            <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"8px",padding:"8px",background:"var(--off-white)",borderRadius:"8px"}}>
+              ℹ️ These projections help you plan. Any commission change will be notified 30 days in advance.
+            </div>
+          </Card>
+
+          {/* Monthly revenue chart */}
+          <Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"14px",fontFamily:"var(--font)"}}>📈 Revenue Trend (₹)</div>
+            <MiniBarChart data={revenueData} height={110}/>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:"12px",padding:"10px",background:"var(--green-light)",borderRadius:"10px"}}>
+              <div><div style={{fontSize:"11px",color:"var(--text-muted)"}}>Total GMV</div><div style={{fontWeight:"800",fontSize:"15px",color:"var(--green-dark)"}}>₹{(totalRevenue/1000).toFixed(0)}K</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:"11px",color:"var(--text-muted)"}}>Commission Paid</div><div style={{fontWeight:"800",fontSize:"15px",color:"var(--green-dark)"}}>₹0</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:"var(--text-muted)"}}>Net Earnings</div><div style={{fontWeight:"800",fontSize:"15px",color:"var(--green-dark)"}}>₹{(totalRevenue/1000).toFixed(0)}K</div></div>
+            </div>
+          </Card>
+        </div>}
+
+        {/* ORDERS TAB */}
+        {tab==="orders"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>📦 Today's Orders ({orders.length})</div>
+          {orders.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-muted)"}}>
+            <div style={{fontSize:"40px",marginBottom:"12px"}}>📭</div>
+            <div style={{fontWeight:"700",color:"var(--text)"}}>No orders yet</div>
+            <div style={{fontSize:"13px",marginTop:"6px"}}>Orders from customers will appear here</div>
+          </div>}
+          <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
+            {orders.map((o,i)=>(
+              <Card key={o.id} style={{animation:`fadeUp 0.4s ease-out ${i*0.05}s both`}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:"12px"}}>
+                  <div style={{width:"44px",height:"44px",borderRadius:"14px",background:o.status==="delivered"?"var(--green-light)":"#fef9c3",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>{o.status==="delivered"?"✅":"🕒"}</div>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{fontWeight:"800",fontSize:"13px",color:"var(--text)"}}>{o.name}</div>
+                      <StatusBadge status={o.status}/>
+                    </div>
+                    <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"3px"}}>📍 {o.address}</div>
+                    <div style={{fontSize:"11px",color:"var(--text-soft)",fontWeight:"600",marginTop:"2px"}}>{o.plan} · {o.time} · #{o.id}</div>
+                  </div>
+                </div>
+                {o.status==="pending"&&<button onClick={()=>markDelivered(o.id)} style={{marginTop:"12px",width:"100%",background:`linear-gradient(135deg,var(--green-dark),var(--green))`,color:"#fff",border:"none",borderRadius:"12px",padding:"12px",fontWeight:"800",fontSize:"13px",cursor:"pointer",boxShadow:"0 4px 14px rgba(34,197,94,0.3)"}}>
+                  ✓ Mark as Delivered
+                </button>}
+              </Card>
+            ))}
+          </div>
+        </div>}
+
+        {/* MENU TAB */}
+        {tab==="menu"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",fontFamily:"var(--font)"}}>🗓️ Weekly Menu</div>
+            <button onClick={()=>setMenuEdit(!menuEdit)} style={{background:menuEdit?"var(--green-light)":"var(--off-white)",border:`2px solid ${menuEdit?"var(--green)":"var(--border)"}`,borderRadius:"10px",padding:"6px 14px",fontWeight:"700",fontSize:"12px",color:menuEdit?"var(--green-deep)":"var(--text-muted)",cursor:"pointer"}}>
+              {menuEdit?"💾 Save":"✏️ Edit"}
+            </button>
+          </div>
+          <Card>
+            <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
+              {["mon","tue","wed","thu","fri","sat","sun"].map((d,i)=>(
+                <div key={d}>
+                  <div style={{fontSize:"11px",fontWeight:"700",color:"var(--green-deep)",marginBottom:"4px",textTransform:"uppercase"}}>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][i]}</div>
+                  {menuEdit?(
+                    <input value={menuItems[d]} onChange={e=>setMenuItems({...menuItems,[d]:e.target.value})}
+                      style={{width:"100%",padding:"10px",borderRadius:"10px",border:`2px solid var(--input-border)`,fontSize:"13px",fontFamily:"var(--font-body)",outline:"none",background:"var(--input-bg)",color:"var(--text)",boxSizing:"border-box"}}/>
+                  ):(
+                    <div style={{fontSize:"13px",color:"var(--text-soft)",padding:"8px 10px",background:"var(--off-white)",borderRadius:"8px"}}>{menuItems[d]}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>}
+
+        {/* SUBSCRIBERS TAB */}
+        {tab==="subscribers"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <Card style={{marginBottom:"14px",background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`}}>
+            <div style={{color:"rgba(255,255,255,0.6)",fontSize:"13px"}}>Active Subscribers</div>
+            <div style={{fontWeight:"900",fontSize:"40px",color:"var(--green)",fontFamily:"var(--font)"}}>{isNewProvider?"0":"34"}</div>
+            <div style={{display:"flex",gap:"12px",marginTop:"12px"}}>
+              {[["Monthly",isNewProvider?"0":"28"],["Daily",isNewProvider?"0":"6"]].map(([l,v])=>(
+                <div key={l} style={{background:"rgba(255,255,255,0.08)",borderRadius:"10px",padding:"8px 14px",flex:1,textAlign:"center"}}>
+                  <div style={{fontWeight:"800",fontSize:"18px",color:"#fff",fontFamily:"var(--font)"}}>{v}</div>
+                  <div style={{color:"rgba(255,255,255,0.5)",fontSize:"11px"}}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+          {!isNewProvider&&<div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+            {["Rahul Patil","Priya Sharma","Amit Desai","Sneha K.","Rohan Joshi","Kavita Rao"].map((name,i)=>(
+              <Card key={name} style={{animation:`fadeUp 0.3s ease-out ${i*0.05}s both`}}>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                  <div style={{width:"42px",height:"42px",borderRadius:"50%",background:`hsl(${i*55%360},55%,82%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"800",fontSize:"16px"}}>{name[0]}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{name}</div>
+                    <div style={{fontSize:"11px",color:"var(--text-muted)"}}>Monthly · ₹1,800/mo</div>
+                  </div>
+                  <StatusBadge status="active"/>
+                </div>
+              </Card>
+            ))}
+          </div>}
+          {isNewProvider&&<div style={{textAlign:"center",padding:"32px 20px",color:"var(--text-muted)"}}>
+            <div style={{fontSize:"40px",marginBottom:"12px"}}>👥</div>
+            <div style={{fontWeight:"700",color:"var(--text)"}}>No subscribers yet</div>
+            <div style={{fontSize:"13px",marginTop:"6px"}}>Customers who subscribe to your tiffin will appear here</div>
+          </div>}
+        </div>}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── ADMIN PANEL (UPGRADED) ──────────────── */
+const AdminPanel = ({onBack, platformConfig, onUpdateConfig}) => {
+  const [tab,setTab] = useState("overview");
+  const [localConfig,setLocalConfig] = useState({...platformConfig});
+  const [saving,setSaving] = useState(false);
+
+  const revenue=[{m:"Oct",v:48000},{m:"Nov",v:62000},{m:"Dec",v:55000},{m:"Jan",v:78000},{m:"Feb",v:91000},{m:"Mar",v:105000}];
+  const totalGMV = 439000;
+  const totalPotentialCommission10 = simulateCommission(totalGMV, 10);
+  const totalPotentialCommissionCurrent = simulateCommission(totalGMV, localConfig.commissionRate);
+  const topTiffins=[{name:"Amma's Kitchen",orders:234,rating:4.8,revenue:"₹42K",area:"College Road"},{name:"Healthy Bites",orders:187,rating:4.9,revenue:"₹52K",area:"Satpur"},{name:"Sharma Tiffin",orders:156,rating:4.6,revenue:"₹34K",area:"Gangapur"},{name:"Shubham Foods",orders:203,rating:4.5,revenue:"₹32K",area:"Pathardi"}];
+
+  const saveConfig = () => {
+    setSaving(true);
+    setTimeout(()=>{ onUpdateConfig(localConfig); setSaving(false); alert("Commission settings updated!"); }, 1000);
+  };
+
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:"844px",background:"var(--off-white)"}}>
+      <div style={{background:`linear-gradient(135deg,var(--green-xdark),#041a0d)`,padding:"48px 20px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"16px"}}>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer",flexShrink:0}}>←</button>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:"900",fontSize:"18px",color:"#fff",fontFamily:"var(--font)"}}>⚙️ Admin Panel</div>
+            <div style={{color:"var(--green-mid)",fontSize:"12px"}}>Lunchly Platform Dashboard</div>
+          </div>
+          <div style={{background:platformConfig.launchMode?"#f97316":"var(--green)",borderRadius:"10px",padding:"6px 12px",display:"flex",alignItems:"center",gap:"6px"}}>
+            <span style={{color:"#fff",fontSize:"11px",fontWeight:"700"}}>{platformConfig.launchMode?"LAUNCH MODE":"LIVE"}</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px"}}>
+          {[["overview","Overview"],["commission","Commission"],["providers","Providers"],["areas","Areas"],["analytics","Analytics"]].map(([t,l])=>(
+            <button key={t} onClick={()=>setTab(t)} style={{background:tab===t?"var(--green)":"rgba(255,255,255,0.12)",border:"none",borderRadius:"100px",padding:"7px 14px",color:"#fff",fontWeight:"700",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap",boxShadow:tab===t?"0 4px 12px rgba(34,197,94,0.4)":"none"}}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+
+        {/* OVERVIEW TAB */}
+        {tab==="overview"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          {/* Launch mode banner */}
+          {platformConfig.launchMode&&<div style={{background:"linear-gradient(135deg,#fff7ed,#ffedd5)",border:"2px solid #fed7aa",borderRadius:"14px",padding:"12px 16px",marginBottom:"14px",display:"flex",gap:"12px",alignItems:"center"}}>
+            <span style={{fontSize:"24px"}}>🎉</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:"700",fontSize:"13px",color:"#92400e"}}>Launch Mode Active</div>
+              <div style={{fontSize:"11px",color:"#c2410c",marginTop:"2px"}}>0% commission. All providers keep 100% of revenue. Switch off in Commission tab.</div>
+            </div>
+          </div>}
+
+          {/* Platform KPIs */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            <StatCard icon="👨‍🍳" value="18" label="Active Providers" sub="+3 this month" color="var(--green)"/>
+            <StatCard icon="👥" value="342" label="Total Customers" sub="+47 this month" color="var(--blue)"/>
+            <StatCard icon="💰" value="₹4.39L" label="Platform GMV" sub="Total transaction value" color="var(--orange)"/>
+            <StatCard icon="🏷️" value={`₹${(totalPotentialCommissionCurrent/1000).toFixed(0)}K`} label="Commission Earned" sub={platformConfig.launchMode?"₹0 (launch mode)":"Active"} color="var(--purple)"/>
+          </div>
+
+          {/* GMV + Potential commission card */}
+          <Card style={{marginBottom:"14px",background:`linear-gradient(135deg,var(--green-xdark),#0d3320)`}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"#fff",marginBottom:"14px",fontFamily:"var(--font)"}}>💹 Platform Financial Summary</div>
+            {[
+              {label:"Total GMV",value:`₹${(totalGMV/1000).toFixed(1)}K`,sub:"All time gross merchandise value",color:"var(--green)"},
+              {label:"Commission @ 0% (Now)",value:"₹0",sub:"Launch mode active",color:"#4ade80"},
+              {label:"Commission @ 5% (Potential)",value:`₹${(simulateCommission(totalGMV,5)/1000).toFixed(1)}K`,sub:"If 5% applied to current GMV",color:"#fbbf24"},
+              {label:"Commission @ 10% (Max potential)",value:`₹${(totalPotentialCommission10/1000).toFixed(1)}K`,sub:"If 10% applied to current GMV",color:"#f87171"},
+            ].map((row,i)=>(
+              <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<3?"1px solid rgba(255,255,255,0.08)":"none"}}>
+                <div>
+                  <div style={{fontWeight:"700",fontSize:"13px",color:"rgba(255,255,255,0.85)"}}>{row.label}</div>
+                  <div style={{fontSize:"11px",color:"rgba(255,255,255,0.4)",marginTop:"2px"}}>{row.sub}</div>
+                </div>
+                <div style={{fontWeight:"900",fontSize:"16px",color:row.color,fontFamily:"var(--font)"}}>{row.value}</div>
+              </div>
+            ))}
+          </Card>
+
+          <Card style={{marginBottom:"14px"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"14px",fontFamily:"var(--font)"}}>📈 Platform Revenue Growth (₹)</div>
+            <MiniBarChart data={revenue} height={100}/>
+          </Card>
+        </div>}
+
+        {/* COMMISSION CONTROL TAB */}
+        {tab==="commission"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <Card style={{marginBottom:"14px",border:`2px solid ${localConfig.launchMode?"#fed7aa":"var(--border-mid)"}`,background:localConfig.launchMode?"#fff7ed":"var(--card-bg)"}}>
+            <div style={{fontWeight:"800",fontSize:"15px",color:localConfig.launchMode?"#92400e":"var(--text)",marginBottom:"16px",fontFamily:"var(--font)"}}>
+              {localConfig.launchMode?"🎉 Launch Mode: ON":"🔄 Commission: Active"}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
+              <div>
+                <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)"}}>Launch Mode (0% Commission)</div>
+                <div style={{fontSize:"12px",color:"var(--text-muted)",marginTop:"2px"}}>When ON, all providers pay 0% commission</div>
+              </div>
+              <Toggle value={localConfig.launchMode} onChange={(v)=>setLocalConfig(p=>({...p,launchMode:v,commissionRate:v?0:p.postLaunchRate}))}/>
+            </div>
+            {!localConfig.launchMode&&<>
+              <div style={{marginBottom:"14px"}}>
+                <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"8px"}}>Commission Rate: <span style={{color:"var(--green-dark)"}}>{localConfig.commissionRate}%</span></div>
+                <input type="range" min="0" max="20" value={localConfig.commissionRate} onChange={e=>setLocalConfig(p=>({...p,commissionRate:parseInt(e.target.value)}))}
+                  style={{width:"100%",accentColor:"var(--green)"}}/>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"11px",color:"var(--text-muted)",marginTop:"4px"}}>
+                  <span>0% (Free)</span><span>10% (Standard)</span><span>20% (Max)</span>
+                </div>
+              </div>
+              <div style={{background:"var(--off-white)",borderRadius:"12px",padding:"12px",marginBottom:"14px"}}>
+                <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)",marginBottom:"8px"}}>💰 Revenue Impact at {localConfig.commissionRate}%</div>
+                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:"12px",color:"var(--text-muted)"}}>On current GMV (₹4.39L)</span><span style={{fontWeight:"800",color:"var(--green-dark)"}}>₹{simulateCommission(totalGMV,localConfig.commissionRate).toLocaleString()}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:"4px"}}><span style={{fontSize:"12px",color:"var(--text-muted)"}}>Monthly estimate (₹1.05L)</span><span style={{fontWeight:"800",color:"var(--green-dark)"}}>₹{simulateCommission(105000,localConfig.commissionRate).toLocaleString()}</span></div>
+              </div>
+            </>}
+            <div style={{marginBottom:"14px"}}>
+              <div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"8px"}}>Post-Launch Rate: <span style={{color:"var(--orange)"}}>{localConfig.postLaunchRate}%</span></div>
+              <div style={{fontSize:"12px",color:"var(--text-muted)",marginBottom:"8px"}}>Rate shown to providers as "future commission"</div>
+              <input type="range" min="5" max="20" value={localConfig.postLaunchRate} onChange={e=>setLocalConfig(p=>({...p,postLaunchRate:parseInt(e.target.value)}))}
+                style={{width:"100%",accentColor:"#f97316"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"11px",color:"var(--text-muted)",marginTop:"4px"}}>
+                <span>5%</span><span>10%</span><span>20%</span>
+              </div>
+            </div>
+            <Btn onClick={saveConfig} loading={saving} variant="orange">💾 Save Commission Settings</Btn>
+            <div style={{fontSize:"11px",color:"var(--text-muted)",textAlign:"center",marginTop:"8px"}}>Changes apply to all future orders. Providers are notified automatically.</div>
+          </Card>
+
+          {/* Per-provider commission preview */}
+          <Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>👨‍🍳 Provider Commission Preview</div>
+            {TIFFINS.map((t,i)=>(
+              <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<3?`1px solid var(--border)`:"none"}}>
+                <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+                  <span style={{fontSize:"18px"}}>{t.emoji}</span>
+                  <div>
+                    <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{t.name}</div>
+                    <div style={{fontSize:"11px",color:"var(--text-muted)"}}>GMV: ₹{(t.monthlyRevenue/1000).toFixed(0)}K/mo</div>
+                  </div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:"800",fontSize:"14px",color:localConfig.launchMode?"#15803d":"var(--orange)"}}>
+                    ₹{localConfig.launchMode ? 0 : simulateCommission(t.monthlyRevenue, localConfig.commissionRate).toLocaleString()}
+                  </div>
+                  <div style={{fontSize:"10px",color:"var(--text-muted)"}}>{localConfig.launchMode?"0% (launch)": `${localConfig.commissionRate}%`}</div>
+                </div>
+              </div>
+            ))}
+          </Card>
+        </div>}
+
+        {/* PROVIDERS TAB */}
+        {tab==="providers"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>All Providers (18)</div>
+          {TIFFINS.map((t,i)=>(
+            <Card key={t.id} style={{marginBottom:"10px",animation:`fadeUp 0.3s ease-out ${i*0.06}s both`}}>
+              <div style={{display:"flex",gap:"12px",alignItems:"center"}}>
+                <div style={{width:"48px",height:"48px",borderRadius:"16px",background:"var(--green-light)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}}>{t.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div style={{fontWeight:"800",fontSize:"13px",color:"var(--text)"}}>{t.name}</div>
+                    <span style={{background:"var(--green-light)",color:"var(--green-deep)",borderRadius:"8px",padding:"3px 8px",fontSize:"10px",fontWeight:"700"}}>✓ Verified</span>
+                  </div>
+                  <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"2px"}}>📍 {t.area} · {t.cook}</div>
+                  <div style={{display:"flex",gap:"10px",marginTop:"4px"}}>
+                    <span style={{fontSize:"11px",fontWeight:"700",color:"var(--green-dark)"}}>₹{t.price}/mo</span>
+                    <Stars rating={t.rating}/>
+                    <Badge type={t.type}/>
+                  </div>
+                  <div style={{fontSize:"11px",color:"var(--text-muted)",marginTop:"2px"}}>Revenue: ₹{(t.monthlyRevenue/1000).toFixed(0)}K/mo · Commission: ₹{simulateCommission(t.monthlyRevenue, localConfig.commissionRate).toLocaleString()}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:"8px",marginTop:"10px"}}>
+                <Btn small variant="ghost">View Orders</Btn>
+                <Btn small variant="outline">Edit</Btn>
+              </div>
+            </Card>
+          ))}
+        </div>}
+
+        {/* AREA-WISE PERFORMANCE TAB */}
+        {tab==="areas"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>📍 Area-wise Performance</div>
+          {AREA_STATS.map((area,i)=>(
+            <Card key={area.area} style={{marginBottom:"10px",animation:`fadeUp 0.3s ease-out ${i*0.06}s both`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
+                <div>
+                  <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",fontFamily:"var(--font)"}}>{area.area}</div>
+                  <div style={{fontSize:"12px",color:"var(--text-muted)",marginTop:"2px"}}>{area.providers} providers · {area.orders} orders/mo</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:"900",fontSize:"16px",color:"var(--green-dark)"}}>₹{(area.gmv/1000).toFixed(0)}K</div>
+                  <div style={{fontSize:"10px",color:"var(--text-muted)"}}>Monthly GMV</div>
+                </div>
+              </div>
+              <div style={{background:"var(--border)",borderRadius:"100px",height:"6px",overflow:"hidden"}}>
+                <div style={{width:`${(area.orders/234)*100}%`,height:"100%",background:`linear-gradient(135deg,var(--green-dark),var(--green))`,borderRadius:"100px"}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:"6px",fontSize:"11px",color:"var(--text-muted)"}}>
+                <span>Commission earned: ₹{simulateCommission(area.gmv, localConfig.commissionRate).toLocaleString()}</span>
+                <span>{Math.round((area.orders/234)*100)}% of max</span>
+              </div>
+            </Card>
+          ))}
+        </div>}
+
+        {/* ANALYTICS TAB */}
+        {tab==="analytics"&&<div style={{animation:"fadeUp 0.4s ease-out"}}>
+          <Card style={{marginBottom:"14px"}}>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"14px",fontFamily:"var(--font)"}}>🏆 Top Performing Providers</div>
+            {topTiffins.map((t,i)=>(
+              <div key={t.name} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 0",borderBottom:i<3?`1px solid var(--border)`:"none"}}>
+                <div style={{width:"28px",height:"28px",borderRadius:"8px",background:i===0?"#fef3c7":i===1?"#f1f5f9":"#fff7ed",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",flexShrink:0}}>{i===0?"🥇":i===1?"🥈":"🥉"}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:"700",fontSize:"13px",color:"var(--text)"}}>{t.name}</div>
+                  <div style={{fontSize:"11px",color:"var(--text-muted)"}}>{t.orders} orders · ⭐ {t.rating} · {t.area}</div>
+                </div>
+                <div style={{fontWeight:"800",fontSize:"14px",color:"var(--green-dark)",fontFamily:"var(--font)"}}>{t.revenue}</div>
+              </div>
+            ))}
+          </Card>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            {[{label:"Avg Order Value",value:"₹218",icon:"📊",color:"var(--blue)"},{label:"Retention Rate",value:"82.9%",icon:"🔄",color:"var(--green)"},{label:"Daily Active",value:"142",icon:"👥",color:"var(--orange)"},{label:"Avg Rating",value:"4.7 ★",icon:"⭐",color:"var(--yellow)"}].map(s=>(
+              <StatCard key={s.label} icon={s.icon} value={s.value} label={s.label} color={s.color}/>
+            ))}
+          </div>
+          <Card>
+            <div style={{fontWeight:"800",fontSize:"14px",color:"var(--text)",marginBottom:"12px",fontFamily:"var(--font)"}}>📅 Orders by Day</div>
+            <MiniBarChart data={[{m:"Mon",v:85},{m:"Tue",v:92},{m:"Wed",v:78},{m:"Thu",v:95},{m:"Fri",v:88},{m:"Sat",v:70},{m:"Sun",v:60}]} height={80}/>
+          </Card>
+        </div>}
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────── MAIN APP ──────────────── */
+function App() {
+  const [screen, setScreen] = useState("splash");
+  const [darkMode, setDarkMode] = useState(false);
+  const [area, setArea] = useState(null);
+  const [tiffin, setTiffin] = useState(null);
+  const [plan, setPlan] = useState(null);
+  const [amount, setAmount] = useState(null);
+  const [mealTime, setMealTime] = useState("lunch");
+  const [user, setUser] = useState(null);
+  const [loginRole, setLoginRole] = useState(null);
+  const [customTiffins, setCustomTiffins] = useState([]);
+  const [providerRegData, setProviderRegData] = useState(null);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [orders, setOrders] = useState(SAMPLE_ORDERS);
+  const [savedAddresses, setSavedAddresses] = useState([
+    {flat:"Room 204", building:"Yashwant Hostel", landmark:"Near Main Gate", pincode:"422005", label:"Home"}
+  ]);
+  const [currentAddress, setCurrentAddress] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(150);
+  const [prevScreen, setPrevScreen] = useState(null);
+
+  // ── PLATFORM CONFIG STATE ──────────────────────────────────────────────────
+  // Central source of truth for commission logic.
+  // All panels (provider, admin) read from this shared config.
+  // In production: replace this with a Firebase remote config or API call.
+  const [platformConfig, setPlatformConfig] = useState(PLATFORM_CONFIG_DEFAULTS);
+
+  const go = (s) => { setPrevScreen(screen); setScreen(s); };
+
+  useEffect(() => {
+    if (darkMode) document.documentElement.classList.add("dark-mode");
+    else document.documentElement.classList.remove("dark-mode");
+  }, [darkMode]);
+
+  const handleCustomer = () => {
+    if (user) go("location");
+    else { setLoginRole("customer"); go("otp-login"); }
+  };
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    if (loginRole==="customer") go("location");
+  };
+
+  const addOrder = (newOrder) => setOrders(prev => [newOrder, ...prev]);
+  const markNotificationsRead = () => setNotifications(prev => prev.map(n=>({...n,read:true})));
+  const cancelOrder = (id) => setOrders(prev => prev.filter(o => o.id !== id));
+
+  const handleProviderRegistration = (formData) => {
+    const newTiffin = {
+      id: Date.now(),
+      name: formData.messName,
+      price: parseInt(formData.monthlyPrice)||1500,
+      type: formData.foodType==="both"?"veg":formData.foodType,
+      rating: 0, reviews: 0,
+      area: formData.area,
+      emoji: formData.emoji||"🥘",
+      tag: formData.tag||"New",
+      tagColor: TAG_COLORS[formData.tag]||"#3b82f6",
+      cook: formData.ownerName,
+      since: new Date().getFullYear().toString(),
+      deliveryTime: formData.deliverySlot==="lunch"?"12:00–1:30 PM":formData.deliverySlot==="dinner"?"7:00–9:00 PM":"12:00–1:30 PM & 7:00–9:00 PM",
+      menu: {mon:"Coming soon",tue:"Coming soon",wed:"Coming soon",thu:"Coming soon",fri:"Coming soon",sat:"Coming soon",sun:"Coming soon"},
+      description: `Fresh homemade tiffins by ${formData.ownerName} in ${formData.area}. Up to ${formData.maxCapacity} slots/day.`,
+      reviewsList: [],
+      featured: false,
+      monthlyOrders: 0,
+      monthlyRevenue: 0,
+    };
+    setCustomTiffins(prev => [newTiffin, ...prev]);
+    setProviderRegData(formData);
+    go("provider-dashboard");
+  };
+
+  const handlePaymentSuccess = () => {
+    const newOrder = {
+      id: "LCH"+Math.floor(Math.random()*90000+10000),
+      tiffin: tiffin.name, emoji: tiffin.emoji,
+      plan: plan==="today"?"Today":plan==="daily"?"Daily":"Monthly",
+      status: plan==="today"?"out_for_delivery":"preparing",
+      amount: amount, date: "Today",
+      statusLabel: plan==="today"?"Out for Delivery":"Preparing"
+    };
+    addOrder(newOrder);
+    setNotifications(prev=>[{id:Date.now(),icon:"✅",title:"Order Confirmed!",msg:`Your order from ${tiffin.name} is confirmed!`,time:"Just now",read:false},...prev]);
+    go("confirm");
+  };
+
+  const handleAddressSave = (addr) => {
+    if (!savedAddresses.find(a=>a.flat===addr.flat&&a.building===addr.building)) {
+      setSavedAddresses(prev=>[...prev,addr]);
+    }
+    setCurrentAddress(addr);
+    go("payment");
+  };
+
+  const showBottomNav = user && ["listing","my-orders","profile","notifications"].includes(screen);
+  const BOTTOM_NAV = [
+    {id:"listing",icon:"🏠",label:"Home"},
+    {id:"my-orders",icon:"📦",label:"Orders"},
+    {id:"notifications",icon:"🔔",label:"Alerts", badge:notifications.filter(n=>!n.read).length},
+    {id:"profile",icon:"👤",label:"Profile"},
+  ];
+
+  return (
+    <PhoneFrame>
+      <div style={{position:"fixed",top:"32px",right:"32px",zIndex:100}}>
+        <DarkToggle dark={darkMode} onToggle={()=>setDarkMode(!darkMode)}/>
+      </div>
+
+      {screen==="splash"&&<SplashScreen onDone={()=>go("role")}/>}
+      {screen==="role"&&<RoleScreen onCustomer={handleCustomer} onProvider={()=>go("provider-login")} onAdmin={()=>go("admin")}/>}
+      {screen==="otp-login"&&<OTPLogin onLogin={handleLogin} onBack={()=>go("role")} role={loginRole}/>}
+      {screen==="location"&&<LocationScreen onSelect={a=>{setArea(a);go("listing");}} onBack={()=>go("role")}/>}
+      {screen==="listing"&&<ListingScreen area={area} onSelect={t=>{setTiffin(t);go("detail");}} onBack={()=>go("location")} user={user} notifications={notifications} onNotifications={()=>go("notifications")} extraTiffins={customTiffins} platformConfig={platformConfig}/>}
+      {screen==="detail"&&tiffin&&<DetailScreen tiffin={tiffin} onSubscribe={(p,a,mt)=>{setPlan(p);setAmount(a);setMealTime(mt||"lunch");go("address");}} onBack={()=>go("listing")}/>}
+      {screen==="address"&&<AddressScreen onSave={handleAddressSave} onBack={()=>go("detail")} savedAddresses={savedAddresses} onSelectSaved={addr=>{setCurrentAddress(addr);go("payment");}}/>}
+      {screen==="payment"&&tiffin&&<PaymentScreen tiffin={tiffin} plan={plan} amount={amount} mealTime={mealTime} address={currentAddress} onSuccess={handlePaymentSuccess} onBack={()=>go("address")} walletBalance={walletBalance}/>}
+      {screen==="confirm"&&tiffin&&<ConfirmScreen tiffin={tiffin} plan={plan} amount={amount} mealTime={mealTime} address={currentAddress} onHome={()=>go("listing")} onMyOrders={()=>go("my-orders")}/>}
+      {screen==="my-orders"&&<MyOrders orders={orders} onBack={()=>go("listing")} onCancelOrder={cancelOrder}/>}
+      {screen==="notifications"&&<NotificationsScreen notifications={notifications} onBack={()=>go("listing")} onMarkRead={markNotificationsRead}/>}
+      {screen==="profile"&&<UserProfile user={user} orders={orders} savedAddresses={savedAddresses} walletBalance={walletBalance} notifications={notifications} onBack={()=>go("listing")} onLogout={()=>{ if(window.lunchlyFirebase) window.lunchlyFirebase.logout(); setUser(null); go("role"); }}/>}
+      {screen==="provider-login"&&<ProviderLogin onLogin={()=>go("provider-dashboard")} onBack={()=>go("role")} onRegister={()=>go("provider-register")}/>}
+      {screen==="provider-register"&&<ProviderRegister onBack={()=>go("provider-login")} onSuccess={handleProviderRegistration}/>}
+      {screen==="provider-dashboard"&&<ProviderDashboard onBack={()=>go("role")} providerData={providerRegData} platformConfig={platformConfig}/>}
+      {screen==="admin"&&<AdminPanel onBack={()=>go("role")} platformConfig={platformConfig} onUpdateConfig={(cfg)=>setPlatformConfig(cfg)}/>}
+
+      {showBottomNav&&(
+        <div style={{display:"flex",borderTop:`1px solid var(--border)`,background:"var(--card-bg)",padding:"10px 0 18px"}}>
+          {BOTTOM_NAV.map(item=>(
+            <button key={item.id} onClick={()=>go(item.id)} style={{flex:1,border:"none",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",cursor:"pointer",position:"relative"}}>
+              <span style={{fontSize:"20px",filter:screen===item.id?"none":"grayscale(0.5)"}}>{item.icon}</span>
+              <span style={{fontSize:"10px",fontWeight:screen===item.id?"700":"500",color:screen===item.id?"var(--green-dark)":"var(--text-muted)"}}>{item.label}</span>
+              {item.badge>0&&<span style={{position:"absolute",top:"-2px",right:"calc(50% - 20px)",background:"#ef4444",color:"#fff",borderRadius:"50%",width:"16px",height:"16px",fontSize:"9px",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center"}}>{item.badge}</span>}
+              {screen===item.id&&<div style={{width:"24px",height:"3px",borderRadius:"2px",background:"var(--green)",marginTop:"2px"}}/>}
+            </button>
+          ))}
+        </div>
+      )}
+    </PhoneFrame>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     FIREBASE v9 MODULAR BACKEND
+     ═══════════════════════════════════════════════════════════════════════
+     SETUP:
+      1. Create project at https://console.firebase.google.com
+      2. Authentication > Sign-in method > Enable "Phone"
+      3. Firestore Database > Create database (test mode for dev)
+      4. Project Settings > Your Apps > copy config into firebaseConfig below
+      5. Authentication > Authorized Domains > add your domain for production
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp }     from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import {
+    getAuth, RecaptchaVerifier,
+    signInWithPhoneNumber, signOut
+  }                            from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import {
+    getFirestore, doc,
+    setDoc, serverTimestamp
+  }                            from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  /* ──────────────────────────────────────────────────────────────────────
+     🔧 REPLACE WITH YOUR FIREBASE CONFIG
+        Firebase Console > Project Settings > Your Apps > SDK setup & config
+  ──────────────────────────────────────────────────────────────────────── */
+  const firebaseConfig = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+  console.log("[Lunchly Firebase] Initialized app, auth, firestore");
+
+  /* ── reCAPTCHA verifier factory ──────────────────────────────────────── */
+  function createRecaptcha() {
+    if (window._lunchlyRecaptcha) {
+      try { window._lunchlyRecaptcha.clear(); } catch (_) {}
+      window._lunchlyRecaptcha = null;
+    }
+    const v = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+      callback:           () => console.log("[Lunchly Firebase] reCAPTCHA solved"),
+      "expired-callback": () => console.warn("[Lunchly Firebase] reCAPTCHA expired")
+    });
+    window._lunchlyRecaptcha = v;
+    return v;
+  }
+
+  /* ── Public API — called by OTPLogin React component ────────────────── */
+  window.lunchlyFirebase = {
+
+    // 1. Send OTP
+    sendOTP: async (phoneNumber) => {
+      console.log("[Lunchly Firebase] sendOTP:", phoneNumber);
+      const verifier = createRecaptcha();
+      try {
+        const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+        window.lunchlyFirebase._confirmationResult = result;
+        console.log("[Lunchly Firebase] OTP sent successfully");
+        return result;
+      } catch (err) {
+        console.error("[Lunchly Firebase] sendOTP error:", err.code, err.message);
+        try { verifier.clear(); } catch (_) {}
+        window._lunchlyRecaptcha = null;
+        throw err;
+      }
+    },
+
+    // 2. Verify OTP
+    verifyOTP: async (code) => {
+      const cr = window.lunchlyFirebase._confirmationResult;
+      if (!cr) throw new Error("No OTP session — please request a new code.");
+      console.log("[Lunchly Firebase] verifyOTP: confirming code");
+      const cred = await cr.confirm(code);
+      console.log("[Lunchly Firebase] OTP verified, uid:", cred.user.uid);
+      return cred;
+    },
+
+    // 3. Save user to Firestore "users" collection
+    saveUser: async (phone, name) => {
+      const u = auth.currentUser;
+      if (!u) throw new Error("No authenticated user — verify OTP first.");
+      console.log("[Lunchly Firebase] saveUser, uid:", u.uid);
+      await setDoc(
+        doc(db, "users", u.uid),
+        { uid: u.uid, phone, name, role: "user", createdAt: serverTimestamp() },
+        { merge: true }
+      );
+      console.log("[Lunchly Firebase] User written to Firestore");
+      return { uid: u.uid };
+    },
+
+    // 4. Logout
+    logout: async () => {
+      try {
+        await signOut(auth);
+        console.log("[Lunchly Firebase] Signed out");
+      } catch (err) {
+        console.error("[Lunchly Firebase] Logout error:", err.code);
+      }
+    },
+
+    _confirmationResult: null
+  };
+
+  console.log("[Lunchly Firebase] window.lunchlyFirebase API ready");
+</script>
+</body>
+</html>
