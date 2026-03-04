@@ -1975,27 +1975,184 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // ═══════════════════════════════════════════════════════
+  // LUNCHLY PRO — Firebase Phone Auth + Firestore Backend
+  // Single canonical module — DO NOT duplicate
+  // ═══════════════════════════════════════════════════════
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  import { initializeApp }                              from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import {
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    onAuthStateChanged,
+    signOut
+  }                                                     from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    serverTimestamp
+  }                                                     from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  // ── Firebase config (lunchly-731fd project) ──────────────
   const firebaseConfig = {
-    apiKey: "AIzaSyCb-S2qt_sWyxlQJdFA4ONAs6cqVdiClYs",
-    authDomain: "lunchly-731fd.firebaseapp.com",
-    projectId: "lunchly-731fd",
-    storageBucket: "lunchly-731fd.firebasestorage.app",
+    apiKey:            "AIzaSyCb-S2qt_sWyxlQJdFA4ONAs6cqVdiClYs",
+    authDomain:        "lunchly-731fd.firebaseapp.com",
+    projectId:         "lunchly-731fd",
+    storageBucket:     "lunchly-731fd.firebasestorage.app",
     messagingSenderId: "465322878314",
-    appId: "1:465322878314:web:152ddf97b6d1904991f113",
-    measurementId: "G-EQ0MMXDSF6"
+    appId:             "1:465322878314:web:152ddf97b6d1904991f113",
+    measurementId:     "G-EQ0MMXDSF6"
   };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  // ── Initialize (single instance) ─────────────────────────
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  console.log("[Lunchly] Firebase initialized — project:", firebaseConfig.projectId);
+
+  // ── Internal state ────────────────────────────────────────
+  let _confirmationResult = null;
+  let _recaptchaVerifier  = null;
+
+  // ── reCAPTCHA factory (invisible, auto-reset safe) ────────
+  function _createRecaptcha() {
+    if (_recaptchaVerifier) {
+      try { _recaptchaVerifier.clear(); } catch (_) {}
+      _recaptchaVerifier = null;
+    }
+    _recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+      callback:           () => console.log("[Lunchly] reCAPTCHA solved ✅"),
+      "expired-callback": () => console.warn("[Lunchly] reCAPTCHA expired — will reset on next call")
+    });
+    return _recaptchaVerifier;
+  }
+
+  // ── Auth state listener (keeps React in sync on reload) ───
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("[Lunchly] Auth state: signed in →", user.uid);
+    } else {
+      console.log("[Lunchly] Auth state: signed out");
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // window.lunchlyFirebase  — public API consumed by React UI
+  // ════════════════════════════════════════════════════════════
+  window.lunchlyFirebase = {
+
+    // ── 1. sendOTP(phoneNumber) ─────────────────────────────
+    //   phoneNumber must be E.164 format, e.g. "+919876543210"
+    sendOTP: async (phoneNumber) => {
+      console.log("[Lunchly] sendOTP →", phoneNumber);
+
+      // Validate +91 Indian format
+      if (!/^\+91[6-9]\d{9}$/.test(phoneNumber)) {
+        throw new Error("Enter a valid Indian mobile number (+91XXXXXXXXXX).");
+      }
+
+      const verifier = _createRecaptcha();
+
+      try {
+        const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+        _confirmationResult = result;
+        console.log("[Lunchly] OTP dispatched successfully");
+        return result;
+      } catch (err) {
+        console.error("[Lunchly] sendOTP failed:", err.code, err.message);
+        // Clean up reCAPTCHA so the user can retry cleanly
+        try { verifier.clear(); } catch (_) {}
+        _recaptchaVerifier = null;
+        _confirmationResult = null;
+
+        // Surface friendly error messages
+        const friendly = {
+          "auth/invalid-phone-number":   "Invalid phone number format.",
+          "auth/too-many-requests":      "Too many attempts. Please try again later.",
+          "auth/quota-exceeded":         "SMS quota exceeded. Try again tomorrow.",
+          "auth/captcha-check-failed":   "reCAPTCHA failed. Refresh the page and retry.",
+          "auth/network-request-failed": "Network error. Check your connection."
+        };
+        throw new Error(friendly[err.code] || err.message);
+      }
+    },
+
+    // ── 2. verifyOTP(code) ──────────────────────────────────
+    //   code: 6-digit string entered by user
+    //   Returns: Firebase UserCredential
+    verifyOTP: async (code) => {
+      console.log("[Lunchly] verifyOTP →", code);
+      if (!_confirmationResult) {
+        throw new Error("No OTP session found. Please request a new code.");
+      }
+      if (!/^\d{6}$/.test(code)) {
+        throw new Error("OTP must be exactly 6 digits.");
+      }
+      try {
+        const credential = await _confirmationResult.confirm(code);
+        console.log("[Lunchly] OTP verified ✅ uid:", credential.user.uid);
+        _confirmationResult = null; // clear after successful verify
+        return credential;
+      } catch (err) {
+        console.error("[Lunchly] verifyOTP failed:", err.code, err.message);
+        const friendly = {
+          "auth/invalid-verification-code": "Incorrect OTP. Please try again.",
+          "auth/code-expired":              "OTP has expired. Request a new code.",
+          "auth/session-expired":           "Session expired. Please restart login."
+        };
+        throw new Error(friendly[err.code] || err.message);
+      }
+    },
+
+    // ── 3. saveUser(phone, name) ────────────────────────────
+    //   Writes / merges user document to Firestore: users/{uid}
+    //   Returns: { uid }
+    saveUser: async (phone, name) => {
+      const user = auth.currentUser;
+      if (!user) throw new Error("No authenticated user. Please verify OTP first.");
+      console.log("[Lunchly] saveUser uid:", user.uid);
+
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid:       user.uid,
+          phone:     phone,
+          name:      name,
+          role:      "user",
+          platform:  "lunchly-pro",
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()   // ignored on subsequent merges
+        },
+        { merge: true }
+      );
+
+      console.log("[Lunchly] User saved to Firestore ✅");
+      return { uid: user.uid };
+    },
+
+    // ── 4. logout() ─────────────────────────────────────────
+    //   Signs the user out of Firebase Auth
+    logout: async () => {
+      console.log("[Lunchly] logout");
+      try {
+        await signOut(auth);
+        _confirmationResult = null;
+        console.log("[Lunchly] Signed out ✅");
+      } catch (err) {
+        console.error("[Lunchly] logout error:", err.code, err.message);
+        throw err;
+      }
+    },
+
+    // ── Expose getAuth for advanced use (e.g. onAuthStateChanged in React)
+    getAuth: () => auth
+  };
+
+  console.log("[Lunchly] window.lunchlyFirebase API ready ✅");
 </script>
 </body>
 </html>
