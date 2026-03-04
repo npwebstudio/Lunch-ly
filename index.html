@@ -431,12 +431,12 @@ const RoleScreen = ({onCustomer,onProvider,onAdmin}) => (
 const OTPLogin = ({onLogin, onBack, role}) => {
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["","","","",""]);
+  const [otp, setOtp] = useState(["","","","","",""]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
-  const otpRefs = [useRef(),useRef(),useRef(),useRef(),useRef()];
+  const otpRefs = [useRef(),useRef(),useRef(),useRef(),useRef(),useRef()];
 
   useEffect(()=>{ if(timer>0){const t=setTimeout(()=>setTimer(timer-1),1000);return()=>clearTimeout(t);} },[timer]);
 
@@ -463,7 +463,7 @@ const OTPLogin = ({onLogin, onBack, role}) => {
 
   const handleOtpChange = (i, val) => {
     const n=[...otp]; n[i]=val.slice(-1); setOtp(n);
-    if(val&&i<4) otpRefs[i+1].current?.focus();
+    if(val&&i<5) otpRefs[i+1].current?.focus();
   };
 
   /* ── Verify OTP via Firebase ────────────────────────────────── */
@@ -515,7 +515,7 @@ const OTPLogin = ({onLogin, onBack, role}) => {
         <button onClick={onBack} style={{position:"absolute",top:"48px",left:"20px",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"12px",width:"38px",height:"38px",color:"#fff",fontSize:"16px",cursor:"pointer"}}>←</button>
         <div style={{fontSize:"56px",animation:"pop 0.6s ease-out both",position:"relative"}}>{role==="provider"?"👨‍🍳":"🎓"}</div>
         <div style={{fontWeight:"900",fontSize:"24px",color:"#fff",marginTop:"14px",position:"relative",fontFamily:"var(--font)"}}>{step==="phone"?"Enter Phone":step==="otp"?"Verify OTP":"Your Profile"}</div>
-        <div style={{color:"var(--green-mid)",fontSize:"13px",marginTop:"6px",position:"relative"}}>{step==="phone"?"We'll send you a 5-digit OTP":step==="otp"?`OTP sent to +91 ${phone}`:"Almost there!"}</div>
+        <div style={{color:"var(--green-mid)",fontSize:"13px",marginTop:"6px",position:"relative"}}>{step==="phone"?"We'll send you a 6-digit OTP":step==="otp"?`OTP sent to +91 ${phone}`:"Almost there!"}</div>
       </div>
       <div style={{flex:1,padding:"28px 24px",background:"var(--off-white)"}}>
         {errorMsg&&<div style={{background:"#fee2e2",border:"1.5px solid #fca5a5",borderRadius:"12px",padding:"10px 14px",marginBottom:"14px",fontSize:"13px",color:"#dc2626",fontWeight:"600",display:"flex",alignItems:"center",gap:"8px"}}>⚠️ {errorMsg}</div>}
@@ -526,16 +526,16 @@ const OTPLogin = ({onLogin, onBack, role}) => {
           </div>
           <Btn onClick={sendOTP} loading={loading} disabled={phone.length<10}>Send OTP →</Btn>
         </>}
-        {step==="otp"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"16px",textAlign:"center"}}>Enter 5-digit OTP</div>
+        {step==="otp"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"16px",textAlign:"center"}}>Enter 6-digit OTP</div>
           <div style={{display:"flex",gap:"8px",justifyContent:"center",marginBottom:"20px"}}>
             {otp.map((v,i)=>(
               <input key={i} ref={otpRefs[i]} value={v} onChange={e=>handleOtpChange(i,e.target.value)} type="tel" maxLength={1}
                 style={{width:"52px",height:"56px",textAlign:"center",fontSize:"22px",fontWeight:"800",borderRadius:"14px",border:`2px solid ${v?"var(--green)":"var(--input-border)"}`,outline:"none",background:"var(--input-bg)",color:"var(--text)",transition:"border 0.2s"}}/>
             ))}
           </div>
-          <Btn onClick={verifyOTP} loading={loading} disabled={otp.join("").length<5}>Verify OTP →</Btn>
+          <Btn onClick={verifyOTP} loading={loading} disabled={otp.join("").length<6}>Verify OTP →</Btn>
           <div style={{textAlign:"center",marginTop:"16px",fontSize:"13px",color:"var(--text-muted)"}}>
-            {timer>0?`Resend in ${timer}s`:<span style={{color:"var(--green-dark)",cursor:"pointer",fontWeight:"700"}} onClick={()=>{setTimer(30);setOtp(["","","","",""]);setStep("phone");}}>Resend OTP</span>}
+            {timer>0?`Resend in ${timer}s`:<span style={{color:"var(--green-dark)",cursor:"pointer",fontWeight:"700"}} onClick={()=>{setTimer(30);setOtp(["","","","","",""]);setStep("phone");}}>Resend OTP</span>}
           </div>
         </>}
         {step==="profile"&&<><div style={{fontWeight:"700",fontSize:"14px",color:"var(--text)",marginBottom:"8px"}}>Your Name</div>
