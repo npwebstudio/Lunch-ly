@@ -444,10 +444,15 @@ const OTPLogin = ({onLogin, onBack, role}) => {
   const sendOTP = async () => {
     if (phone.length < 10) return;
     setErrorMsg(""); setLoading(true);
-    console.log("[Lunchly] Sending OTP to +91" + phone);
+    // Clean: strip spaces/dashes, then format to E.164 without duplicating +91
+    const cleaned = phone.replace(/[^\d]/g, "");
+    const formatted = cleaned.startsWith("91") && cleaned.length === 12
+      ? "+" + cleaned
+      : "+91" + cleaned.replace(/^91/, "");
+    console.log("[Lunchly] Formatted phone for Firebase:", formatted);
     try {
       if (window.lunchlyFirebase) {
-        await window.lunchlyFirebase.sendOTP("+91" + phone);
+        await window.lunchlyFirebase.sendOTP(formatted);
         console.log("[Lunchly] OTP dispatched via Firebase");
       } else {
         console.warn("[Lunchly] Firebase not ready — using mock flow");
@@ -2046,14 +2051,28 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   window.lunchlyFirebase = {
 
     // ── 1. sendOTP(phoneNumber) ─────────────────────────────
-    //   phoneNumber must be E.164 format, e.g. "+919876543210"
+    //   Accepts: "8087362932", "918087362932", "+918087362932"
+    //   Always normalises to E.164 (+91XXXXXXXXXX) before calling Firebase
     sendOTP: async (phoneNumber) => {
-      console.log("[Lunchly] sendOTP →", phoneNumber);
+      // ── Normalise to E.164 ──────────────────────────────────
+      // Strip everything except digits and leading +
+      let digits = String(phoneNumber).replace(/[^\d]/g, "");
 
-      // Validate +91 Indian format
-      if (!/^\+91[6-9]\d{9}$/.test(phoneNumber)) {
-        throw new Error("Enter a valid Indian mobile number (+91XXXXXXXXXX).");
+      let e164;
+      if (digits.length === 10) {
+        // bare 10-digit: 8087362932 → +918087362932
+        e164 = "+91" + digits;
+      } else if (digits.length === 12 && digits.startsWith("91")) {
+        // country code without +: 918087362932 → +918087362932
+        e164 = "+" + digits;
+      } else if (String(phoneNumber).startsWith("+") && digits.length === 12) {
+        // already E.164: +918087362932 → keep
+        e164 = "+" + digits;
+      } else {
+        throw new Error("Enter a valid 10-digit Indian mobile number.");
       }
+
+      console.log("[Lunchly] sendOTP — raw input:", phoneNumber, "→ E.164:", e164);
 
       const verifier = _createRecaptcha();
 
@@ -2095,7 +2114,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
       try {
         const credential = await _confirmationResult.confirm(code);
         console.log("[Lunchly] OTP verified ✅ uid:", credential.user.uid);
-        _confirmationResult = null; // clear after successful verify
+        _confirmationResult = null; // clear session after successful verify
+        console.log("[Lunchly] Firebase test mode — OTP confirmed with confirmationResult.confirm()");
         return credential;
       } catch (err) {
         console.error("[Lunchly] verifyOTP failed:", err.code, err.message);
